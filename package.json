@@ -1,0 +1,35 @@
+{
+   "name": "new-typeorm-project",
+   "version": "0.0.1",
+   "description": "Awesome project developed with TypeORM.",
+   "devDependencies": {
+      "@types/bcrypt": "^3.0.0",
+      "@types/body-parser": "^1.17.1",
+      "@types/express": "^4.17.2",
+      "@types/jsonwebtoken": "^8.3.7",
+      "@types/node": "^13.7.0",
+      "@types/uuid": "^3.4.7",
+      "env-cmd": "^10.1.0",
+      "nodemon": "^2.0.2",
+      "ts-node": "8.6.2",
+      "typescript": "3.7.3"
+   },
+   "dependencies": {
+      "@types/cors": "^2.8.6",
+      "@types/lodash": "^4.14.149",
+      "bcrypt": "^3.0.8",
+      "body-parser": "^1.19.0",
+      "cors": "^2.8.5",
+      "express": "^4.17.1",
+      "jsonwebtoken": "^8.5.1",
+      "lodash": "^4.17.15",
+      "pg": "^7.18.1",
+      "query-string": "^6.10.1",
+      "reflect-metadata": "^0.1.13",
+      "typeorm": "0.2.22",
+      "uuid": "^3.4.0"
+   },
+   "scripts": {
+      "start": "env-cmd -f ./env/dev.env ts-node src/index.ts"
+   }
+}
