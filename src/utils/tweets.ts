@@ -262,7 +262,7 @@ export const getUserTweetsPaginated = async (userId: string, skip: number, take:
     return response
 }
 
-export const getConversationPaginated = async (userId: string, skip: number, take: number, firstRequestTime: number, parentId: number, getUsers: boolean) => {
+export const getConversationPaginated = async (userId: string, skip: number, take: number, firstRequestTime: number, parentId: number, getUsers: boolean, getMainTweet: boolean) => {
     const tweetsRepo = getRepository(Tweets) 
 
     let mainTweet =  await getTweetsbyId(userId, [parentId])
@@ -294,13 +294,6 @@ export const getConversationPaginated = async (userId: string, skip: number, tak
     .skip(skip)
     .getMany()
 
-    if (replies.length === 0) {
-        return {
-            tweets: {...mainTweet},
-            users: {...mainTweetAuthor}
-        }
-    }
-
     const tweetsWithParentAuthorData: ExtendedTweet[] = replies.map(tweet => ({
         ...tweet,
         sortindex: Date.parse(tweet.createdAt),
@@ -313,13 +306,16 @@ export const getConversationPaginated = async (userId: string, skip: number, tak
     }))
     const formatedTweets = formatTweetsFromDB(tweetsWithParentAuthorData, userId)
 
-    const response: TweetsResponse = {tweets: {...formatedTweets, ...mainTweet}, users: {}}
-    response.users = mainTweetAuthor
+    const response: TweetsResponse = {tweets: {...formatedTweets}, users: {}}
 
     if (getUsers) {
         const userIds = uniq(replies.map(tweet => tweet.userId))
         const users = await usersFunctions.getUsersByIds(userId, userIds)
-        response.users = {...response.users, ...users}
+        response.users = users
+    }
+    if (getMainTweet) {
+        response.tweets = {...response.tweets, ...mainTweet}
+        response.users = {...response.users, ...mainTweetAuthor}
     }
 
     return response

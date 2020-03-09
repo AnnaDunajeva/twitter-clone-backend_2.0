@@ -47,6 +47,7 @@ export const saveLikeToggle = async (req: RequestWithCustomProperties, res: Resp
 
 export const saveTweet = async (req: RequestWithCustomProperties, res: Response) => {
     try {
+        // throw new Error('error check')
         const {text, replyingTo} = req.body as {text: string, replyingTo: number}
         const userId = req.userId as string
         
@@ -218,6 +219,7 @@ export const getConversationPaginated = async (req: RequestWithCustomProperties,
         const userId = req.userId as string
         const parentId = parseInt(req.params.tweetId)
         const getUsers = req.query.getUsers === 'true' ? true : false
+        const getMainTweet = req.query.getMainTweet === 'true' ? true : false
 
         const take = parseInt(req.query.take)
         const skip = parseInt(req.query.skip)
@@ -228,7 +230,7 @@ export const getConversationPaginated = async (req: RequestWithCustomProperties,
             throw new Error('missing pagination parameters')
         }
 
-        const response = await tweetsFunc.getConversationPaginated(userId, skip, take, firstRequestTime, parentId, getUsers)
+        const response = await tweetsFunc.getConversationPaginated(userId, skip, take, firstRequestTime, parentId, getUsers, getMainTweet)
         res.status(201).json({...response, status: "ok"})
     }
     catch(err) {
