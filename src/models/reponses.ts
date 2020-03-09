@@ -5,7 +5,7 @@ import {UsersInterface} from './users'
 export interface TweetsResponse {
     tweets: TweetsInterface;
     parents?: TweetsInterface;
-    users?: UsersInterface;
+    users: UsersInterface;
 }
 // export interface PaginatedUserTweetsResponse {
 //     tweets: TweetsInterface;

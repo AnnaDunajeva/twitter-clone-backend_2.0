@@ -28,7 +28,7 @@ export const login: RequestHandler = async (req, res) => {
         res.status(201).json({user: userProfile, token, status: "ok"})
     }
     catch (err) {
-        res.status(400).json({error: err, status:"error"})
+        res.status(400).json({error: err.message, status:"error"})
     }
 }
 
@@ -40,7 +40,7 @@ export const logout = async (req: RequestWithCustomProperties, res: Response) =>
         res.status(201).json({message: "success", status: "ok"})
     }
     catch(err) {
-        res.status(500).json({error: err, status: "error"})
+        res.status(500).json({error: err.message, status: "error"})
     }
 }
 
@@ -52,6 +52,6 @@ export const logoutAll = async (req: RequestWithCustomProperties, res: Response)
         res.status(201).json({message: "success", status: "ok"})
     }
     catch(err) {
-        res.status(500).json({error: err, status: "error"})
+        res.status(500).json({error: err.message, status: "error"})
     }
 }

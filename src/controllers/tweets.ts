@@ -77,7 +77,12 @@ export const saveTweet = async (req: RequestWithCustomProperties, res: Response)
             tweetFromDB.parentAuthorData = parentAuthorData[tweetFromDB.parentId!]
         }
 
-        res.status(201).json({tweet: formatTweet(tweetFromDB, userId), status: "ok"})
+        res.status(201).json({
+            tweet: {
+                [tweetFromDB.tweetId]: formatTweet(tweetFromDB, userId)
+            },
+            status: "ok"
+        })
 
     } catch (err) {
         res.status(400).json({error: err.message, status: "error"})

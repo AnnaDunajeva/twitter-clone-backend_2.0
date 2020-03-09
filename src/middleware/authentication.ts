@@ -17,6 +17,6 @@ export const authentication = async (req: RequestWithCustomProperties, res: Resp
         next()
     } 
     catch(err) {
-        res.status(401).json({error: err})
+        res.status(401).json({error: err.message})
     }
 }

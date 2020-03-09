@@ -172,7 +172,10 @@ export const getPaginatedUserFeed = async (userId: string, skip: number, take: n
     .getMany()
 
     if (tweets.length === 0) {
-        return {}
+        return {
+            tweets: {},
+            users: {}
+        }
     }
 
     const parentTweetIds = uniq(tweets.filter(tweet => tweet.parentId !== null).map(tweet => tweet.parentId!))
@@ -191,7 +194,7 @@ export const getPaginatedUserFeed = async (userId: string, skip: number, take: n
 
     const formatedTweets = formatTweetsFromDB(tweetsWithParentAuthorData, userId)
 
-    const response: TweetsResponse = {tweets: formatedTweets}
+    const response: TweetsResponse = {tweets: formatedTweets, users: {}}
 
     if (getUsers) {
         const userIds = uniq(tweets.map(tweet => tweet.userId))
@@ -222,7 +225,10 @@ export const getUserTweetsPaginated = async (userId: string, skip: number, take:
     .getMany()
 
     if (tweets.length === 0) {
-        return {}
+        return {
+            tweets: {},
+            users: {}
+        }
     }
 
     const parentTweetIds = uniq(tweets.filter(tweet => tweet.parentId !== null).map(tweet => tweet.parentId!))
@@ -241,7 +247,7 @@ export const getUserTweetsPaginated = async (userId: string, skip: number, take:
 
     const formatedTweets = formatTweetsFromDB(tweetsWithParentAuthorData, userId)
 
-    const response: TweetsResponse = {tweets: formatedTweets}
+    const response: TweetsResponse = {tweets: formatedTweets, users: {}}
 
     if (getUsers) {
         const userIds = uniq(tweets.map(tweet => tweet.userId))
@@ -260,7 +266,13 @@ export const getConversationPaginated = async (userId: string, skip: number, tak
     const tweetsRepo = getRepository(Tweets) 
 
     let mainTweet =  await getTweetsbyId(userId, [parentId])
-     mainTweet[parentId].type = 'main tweet'
+    if (Object.keys(mainTweet).length === 0) {
+        return {
+            tweets: {},
+            users: {}
+        }
+    }
+    mainTweet[parentId].type = 'main tweet'
     const mainTweetAuthor = await usersFunctions.getUsersByIds(userId, [mainTweet[parentId].user])
 
     if (mainTweet[parentId].repliesCount === 0) {
@@ -301,7 +313,7 @@ export const getConversationPaginated = async (userId: string, skip: number, tak
     }))
     const formatedTweets = formatTweetsFromDB(tweetsWithParentAuthorData, userId)
 
-    const response: TweetsResponse = {tweets: {...formatedTweets, ...mainTweet}}
+    const response: TweetsResponse = {tweets: {...formatedTweets, ...mainTweet}, users: {}}
     response.users = mainTweetAuthor
 
     if (getUsers) {
