@@ -3,10 +3,12 @@
 
 export interface FormatedUser {
     userId: string;
-    name: string;
+    firstName: string;
+    lastName: string;
     createdAt: number;
-    avatarURL: string | null;
-    backgroundURL: string | null;
+    avatar: string;
+    backgroundColor: string | null;
+    backgroundImage: string | null;
     description: string | null;
     location: string | null;
     following?: boolean; //only for nonAuthed
@@ -21,8 +23,9 @@ export interface ExtendedUser {
     firstName: string;
     lastName: string;
     createdAt: string;
-    avatar: string | null;
-    background: string | null;
+    avatar: boolean;
+    backgroundColor: string | null;
+    backgroundImage: boolean;
     description: string | null;
     location: string | null;
     following?: boolean; //only for nonAuthed
@@ -39,8 +42,9 @@ export interface UsersInterface {
 export interface UpdateUserData {
     firstName?: string;
     lastName?: string;
-    avatar?: string;
-    background?: string;
+    avatar?: Buffer;
+    backgroundColor?: string;
+    backgroundImage?: Buffer;
     description?: string;
     location?: string;
     email?: string;

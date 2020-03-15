@@ -32,11 +32,14 @@ export class Users {
     @Column({nullable: true, type: 'varchar'})
     location!: string | null;
 
-    @Column({nullable: true, type: 'varchar'})
-    avatar!: string | null;
+    @Column({nullable: true, type: 'bytea'})
+    avatar!: Buffer | null;
 
     @Column({nullable: true, type: 'varchar'})
-    background!: string | null;
+    backgroundColor!: string | null;
+
+    @Column({nullable: true, type: 'bytea'})
+    backgroundImage!: Buffer | null;
 
     @OneToMany(() => Tokens, tokens => tokens.user)
     tokens!: Tokens[];

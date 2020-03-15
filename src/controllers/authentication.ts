@@ -13,11 +13,11 @@ export const login: RequestHandler = async (req, res) => {
         const usersRepo = getRepository(Users)
         const user  = await usersRepo.findOne(userId)
         if (!user) {
-            throw new Error('Username and password does not match!')           
+            throw new Error('Username and password do not match!')           
         }
         const match = await bcrypt.compare(password, user.password)
         if (!match) {
-            throw new Error('Username and password does not match!')
+            throw new Error('Username and password do not match!')
         } 
 
         const token = auth.generateAuthToken(user.userId)

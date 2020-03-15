@@ -12,7 +12,7 @@ export const getUserProfile = async (userId: string) => {
     .createQueryBuilder("users")
     .leftJoin("users.followings", "followings")
     .where("users.userId =:id", { id: userId })
-    .select(['followings.followingId', 'users.userId','users.firstName', 'users.lastName','users.createdAt', 'users.avatar', 'users.background', 'users.email', 'users.description', 'users.location']) 
+    .select(['followings.followingId', 'users.userId','users.firstName', 'users.lastName','users.createdAt', 'users.avatar', 'users.backgroundColor', 'users.backgroundImage','users.email', 'users.description', 'users.location']) 
     // .addSelect('extract(epoch from users.createdAt)', 'createdAt') //in sec, ??is it number or string?
     //.addSelect('COUNT(followings.followingId)', 'followingsCount') //weird error, dont know how to solve
     .getOne()
@@ -24,7 +24,9 @@ export const getUserProfile = async (userId: string) => {
     
     const user = {
         ...userFromDB,
-        followingsCount: userFromDB.followings.length
+        followingsCount: userFromDB.followings.length,
+        avatar: userFromDB.avatar ? true : false,
+        backgroundImage: userFromDB.backgroundImage ? true : false
     } as ExtendedUser
 
     const followersIds: string[] = await getFollowersIds(userId)
@@ -85,7 +87,7 @@ export const getUsersByIds = async (authedUser: string, ids: string[]) => {
         .createQueryBuilder("users")
         .leftJoin("users.followings", "followings")
         .where("users.userId IN (:...ids)", { ids: ids })
-        .select(['followings.followingId', 'users.userId','users.firstName', 'users.lastName','users.createdAt', 'users.avatar', 'users.background', 'users.description', 'users.location']) 
+        .select(['followings.followingId', 'users.userId','users.firstName', 'users.lastName','users.createdAt', 'users.avatar', 'users.backgroundColor', 'users.backgroundImage','users.description', 'users.location']) 
         .getMany()
 
         if(users.length === 0) {
@@ -95,7 +97,11 @@ export const getUsersByIds = async (authedUser: string, ids: string[]) => {
         const formatedUsers: UsersInterface = {};
 
         for (let userFromDB of users) {
-            const user = { ...userFromDB } as ExtendedUser
+            const user = {
+                 ...userFromDB, 
+                 avatar: userFromDB.avatar ? true : false,
+                 backgroundImage: userFromDB.backgroundImage ? true : false
+            } as ExtendedUser
             const followersIds: string[] = await getFollowersIds(userFromDB.userId)
     
             user.followersCount = followersIds.length
@@ -137,7 +143,7 @@ export const getAllUsersPaginated = async (authedUser: string, skip: number, tak
     const users  = await usersRepo
     .createQueryBuilder("users")
     .leftJoin("users.followings", "followings")
-    .select(['followings.followingId', 'users.userId','users.firstName', 'users.lastName','users.createdAt', 'users.avatar', 'users.background', 'users.description', 'users.location']) 
+    .select(['followings.followingId', 'users.userId','users.firstName', 'users.lastName','users.createdAt', 'users.avatar', 'users.backgroundColor', 'users.backgroundImage','users.description', 'users.location']) 
     .where("users.userId <> :id", { id: authedUser })
     .andWhere(`users.createdAt < to_timestamp(${firstRequestTime/1000})`) //doesnt work
     .take(take)
@@ -151,7 +157,11 @@ export const getAllUsersPaginated = async (authedUser: string, skip: number, tak
     const formatedUsers: UsersInterface = {};
 
     for (let userFromDB of users) {
-        const user = { ...userFromDB } as ExtendedUser
+        const user = { 
+            ...userFromDB,
+            avatar: userFromDB.avatar ? true : false,
+            backgroundImage: userFromDB.backgroundImage ? true : false
+        } as ExtendedUser
         const followersIds: string[] = await getFollowersIds(userFromDB.userId)
         //const followingsIds = userFromDB.followings.map(following => following.followingId)
 

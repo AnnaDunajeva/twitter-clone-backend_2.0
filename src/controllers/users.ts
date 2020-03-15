@@ -9,7 +9,9 @@ import bcrypt from 'bcrypt'
 import * as tokens from '../utils/tokens'
 import * as auth from '../utils/authentication'
 import * as users from '../utils/users'
-
+import { DefaultProfileImage } from "../entity/DefaultProfileImage"
+import sharp from 'sharp'
+import {omit} from 'lodash'
 
 export const getUserProfile = async (req: RequestWithCustomProperties, res: Response) => {
     try {
@@ -36,13 +38,93 @@ export const getUser = async (req: RequestWithCustomProperties, res: Response) =
     }
 }
 
+// export const getUserAvatar = async (req: RequestWithCustomProperties, res: Response) => {
+//     try {
+//         // const userId = req.userId as string
+//         const userIdToGet = req.params.userId as string
+
+//         const usersRepo = getRepository(Users)
+//         const user = await usersRepo.findOne({userId: userIdToGet})
+//         const avatar = user?.avatar?.toString('base64') || null
+
+//         res.status(201).json({image: avatar, status: "ok"})
+//     }
+//     catch (err) {
+//         res.status(400).json({error: err, status: "error"})
+//     }
+// }
+export const getUserAvatar = async (req: RequestWithCustomProperties, res: Response) => {
+    try {
+        // const userId = req.userId as string
+        const userIdToGet = req.params.userId as string
+
+        const usersRepo = getRepository(Users)
+        const user = await usersRepo.findOne({userId: userIdToGet})
+        if (!user) {
+            throw new Error('not found')
+        }
+
+        let avatar = user.avatar
+        if(!avatar) {
+            const avatarResponse = await getRepository(DefaultProfileImage)
+                .createQueryBuilder("image")
+                .take(1)
+                .getOne()
+            console.log(avatarResponse)
+            avatar = avatarResponse?.image || null
+        }
+
+        res.set('Content-Type', 'image/jpeg')
+        res.status(201).send(avatar)
+    }
+    catch (err) {
+        res.status(400).json({error: err, status: "error"})
+    }
+}
+
+export const getUserAvatarDefault = async (req: RequestWithCustomProperties, res: Response) => {
+    try {
+        const avatarResponse = await getRepository(DefaultProfileImage)
+            .createQueryBuilder("image")
+            .take(1)
+            .getOne()
+        console.log(avatarResponse)
+
+        res.set('Content-Type', 'image/jpg')
+        res.status(201).send(avatarResponse?.image || null)
+    }
+    catch (err) {
+        res.status(400).json({error: err, status: "error"})
+    }
+}
+
+export const getUserBackground = async (req: RequestWithCustomProperties, res: Response) => {
+    try {
+        // const userId = req.userId as string
+        const userIdToGet = req.params.userId as string
+
+        const usersRepo = getRepository(Users)
+        const user = await usersRepo.findOne({userId: userIdToGet})
+        if (!user || !user.backgroundImage) {
+            throw new Error('not found')
+        }
+        const backgroundImage = user.backgroundImage
+
+        res.set('Content-Type', 'image/jpg')
+        res.status(201).send(backgroundImage)
+    }
+    catch (err) {
+        res.status(400).json({error: err, status: "error"})
+    }
+}
+
 export const addUser: RequestHandler = async (req, res) => {
     try {
         const usersRepo = getRepository(Users)
-        const {userId, firstName, lastName, avatarURL, password, backgroundURL, description, location, email} = req.body as {userId: string, firstName: string, lastName: string, avatarURL: string, password: string, backgroundURL: string | null | undefined, description: string | null | undefined, location: string | null | undefined, email: string}
+        const {userId, firstName, lastName, password, email} = req.body as {userId: string, firstName: string, lastName: string, avatarURL: string, password: string, backgroundURL: string | null | undefined, description: string | null | undefined, location: string | null | undefined, email: string}
         // const problem = await usersRepo.findOne(undefined)
         // console.log(problem)
-        if (!(userId && firstName && lastName && avatarURL && password)) {
+        if (!(userId && firstName && lastName && email && password)) {
             throw new Error('All fields must be filled!')
         }
         if (await usersRepo.findOne({userId})) { //if i use select options, then if userId is undefined, it wont return first value in column but returns undefined
@@ -53,10 +135,11 @@ export const addUser: RequestHandler = async (req, res) => {
             userId: userId.toLowerCase(),
             firstName: firstName, 
             lastName: lastName,
-            avatar: avatarURL || null,
-            background: backgroundURL || null,
-            description: description || null,
-            location: location || null,
+            avatar: null,
+            backgroundImage: null,
+            backgroundColor: null,
+            description: null,
+            location: null,
             email: email,
             password: await bcrypt.hash(password.toString(), 8),
             createdAt: () => `to_timestamp(${Date.now()/1000})` //postgres func to_timestamp accepts unix time in sec
@@ -106,24 +189,67 @@ export const addUser: RequestHandler = async (req, res) => {
 //     }
 // }
 
+// export const updateUser = async (req: RequestWithCustomProperties, res: Response) => {
+//     try {
+//         const userDataToUpdate = req.body
+//         console.log(userDataToUpdate)
+//         const userId = req.userId as string
+        
+//         //need to somehow validate data that user wants to change
+//         const supportedProperties = ['firstName', 'lastName', 'location', 'description', 'avatar', 'background', 'email']
+//         if (Object.keys(userDataToUpdate).length === 0) {
+//             throw new Error('no fields provided')
+//         }
+//         for (let key in userDataToUpdate) {
+//             if (!supportedProperties.includes(key)) {
+//                 throw new Error('invalid field')
+//             }
+//         }
+
+//         await users.updateUser(userId, userDataToUpdate)
+
+//         const newUserProfile = await users.getUserProfile(userId)
+
+//         res.status(201).json({user: newUserProfile, status: "ok"})
+//     }
+//     catch (err) {
+//         console.log(err)
+//         res.status(400).json({error: err.message, status: "error"}) 
+//     }
+// }
+
 export const updateUser = async (req: RequestWithCustomProperties, res: Response) => {
+    //handels only 1 file, so avatar and background cant be updated at the same time
     try {
-        const userDataToUpdate = req.body
+        const userDataToUpdate = JSON.parse(req.body.user)
         console.log(userDataToUpdate)
+        // throw new Error('test from backend')
         const userId = req.userId as string
+        const file = req.file?.buffer || null
+        const crop = userDataToUpdate.crop || null
         
         //need to somehow validate data that user wants to change
-        const supportedProperties = ['firstName', 'lastName', 'location', 'description', 'avatar', 'background', 'email']
+        const supportedProperties = ['firstName', 'lastName', 'location', 'description', 'avatar', 'email', 'backgroundColor', 'backgroundImage', 'crop']
         if (Object.keys(userDataToUpdate).length === 0) {
-            throw new Error('no fields provided')
+            throw new Error('No fields provided.')
         }
         for (let key in userDataToUpdate) {
             if (!supportedProperties.includes(key)) {
-                throw new Error('invalid field')
+                throw new Error('Invalid field.')
             }
         }
+        if (file && !crop) {
+            throw new Error('Crop options not specified.')
+        }
+        
+        if (file && userDataToUpdate.backgroundImage) {
+            userDataToUpdate.backgroundImage = await sharp(file).extract({left: Math.round(crop.x), top: Math.round(crop.y), width: Math.round(crop.width), height: Math.round(crop.height)}).resize({width: 1000, height: 200}).jpeg().toBuffer()
+        } else if (file && userDataToUpdate.avatar) {
+            userDataToUpdate.avatar = await sharp(file).extract({left: Math.round(crop.x), top: Math.round(crop.y), width: Math.round(crop.width), height: Math.round(crop.height)}).resize({width: 200, height: 200}).jpeg().toBuffer()
+        }
+        console.log(userDataToUpdate)
 
-        await users.updateUser(userId, userDataToUpdate)
+        await users.updateUser(userId, omit(userDataToUpdate, 'crop'))
 
         const newUserProfile = await users.getUserProfile(userId)
 
@@ -134,6 +260,7 @@ export const updateUser = async (req: RequestWithCustomProperties, res: Response
         res.status(400).json({error: err.message, status: "error"}) 
     }
 }
+
 // export const getUsersByIds = async (req: RequestWithCustomProperties, res: Response) => { 
 //     try {
 //         const userIds = req.body.users as string[]

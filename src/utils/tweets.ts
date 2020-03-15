@@ -300,7 +300,7 @@ export const getConversationPaginated = async (userId: string, skip: number, tak
         type: 'reply',
         parentAuthorData: {
             tweetId: parentId,
-            name: mainTweetAuthor[mainTweet[parentId].user].name,
+            name: `${mainTweetAuthor[mainTweet[parentId].user].firstName} ${mainTweetAuthor[mainTweet[parentId].user].lastName}`,
             userId: mainTweetAuthor[mainTweet[parentId].user].userId
         }
     }))

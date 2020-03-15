@@ -2,18 +2,24 @@ import {FormatedUser, ExtendedUser} from '../models/users'
 import {TweetsInterface, ExtendedTweet, FormatedTweet} from '../models/tweets' //FormatedTweet
 // import {Tweets} from '../entity/Tweets'
 //import {smallTweetAuthor} from '../models/tweets'
+import {v4 as uuidv4} from 'uuid';
+
+const URL = 'http://localhost:3001/user'
 
 export const formatUser = (user: ExtendedUser) => {
     const formatedUser: FormatedUser = {
-          userId: user.userId,
-          name: `${user.firstName} ${user.lastName}`,
-          avatarURL: user.avatar,
-          createdAt: Date.parse(user.createdAt),
-          backgroundURL: user.background,
-          description: user.description,
-          location: user.location,
-          followersCount: user.followersCount,
-          followingsCount: user.followingsCount
+        userId: user.userId,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        avatar: user.avatar ?`${URL}/${user.userId}/avatar?${uuidv4()}`: `${URL}/${user.userId}/avatar/default`,
+        createdAt: Date.parse(user.createdAt),
+        backgroundColor: user.backgroundColor,
+    //   backgroundImage: user.backgroundImage?.toString('base64') || null,
+        backgroundImage: user.backgroundImage ? `${URL}/${user.userId}/background?${uuidv4()}` : null,
+        description: user.description,
+        location: user.location,
+        followersCount: user.followersCount,
+        followingsCount: user.followingsCount
       }
       if (user.email) {
           formatedUser.email = user.email
