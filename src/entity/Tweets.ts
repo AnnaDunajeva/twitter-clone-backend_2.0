@@ -24,6 +24,9 @@ export class Tweets {
     @Column({nullable: true, type: "bigint" }) 
     parentId!: number | null;
 
+    @Column({nullable: true, type: 'bytea'})
+    media!: Buffer | null;
+
     @OneToMany(() => Likes, likes => likes.tweet) //cascade?
     likes!: Likes[];
 

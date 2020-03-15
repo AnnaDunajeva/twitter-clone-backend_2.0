@@ -62,7 +62,10 @@ export const getTweetsbyId = async (userId: string, ids: number[]) => {
     const parentAuthorData = parentTweetIds.length !== 0 ?  await getTweetsAuthorDataSmall(parentTweetIds) : {}
 
     const tweetsWithParentAuthorData = tweets.map(tweet => {
-        const newTweet: ExtendedTweet = {...tweet}
+        const newTweet: ExtendedTweet = {
+            ...tweet,
+            media: tweet.media ? true : false
+        }
         if (tweet.parentId) {
             newTweet.parentAuthorData = parentAuthorData[tweet.parentId]
         }
@@ -184,7 +187,8 @@ export const getPaginatedUserFeed = async (userId: string, skip: number, take: n
     const tweetsWithParentAuthorData = tweets.map(tweet => {
         const newTweet: ExtendedTweet = {
             ...tweet,
-            sortindex: Date.parse(tweet.createdAt)
+            sortindex: Date.parse(tweet.createdAt),
+            media: tweet.media ? true : false
         }
         if (tweet.parentId) {
             newTweet.parentAuthorData = parentAuthorData[tweet.parentId]
@@ -237,7 +241,8 @@ export const getUserTweetsPaginated = async (userId: string, skip: number, take:
     const tweetsWithParentAuthorData = tweets.map(tweet => {
         const newTweet: ExtendedTweet = {
             ...tweet,
-            sortindex: Date.parse(tweet.createdAt)
+            sortindex: Date.parse(tweet.createdAt),
+            media: tweet.media ? true : false
         }
         if (tweet.parentId) {
             newTweet.parentAuthorData = parentAuthorData[tweet.parentId]
@@ -298,6 +303,7 @@ export const getConversationPaginated = async (userId: string, skip: number, tak
         ...tweet,
         sortindex: Date.parse(tweet.createdAt),
         type: 'reply',
+        media: tweet.media ? true : false,
         parentAuthorData: {
             tweetId: parentId,
             name: `${mainTweetAuthor[mainTweet[parentId].user].firstName} ${mainTweetAuthor[mainTweet[parentId].user].lastName}`,

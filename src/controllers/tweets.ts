@@ -11,6 +11,7 @@ import * as tweetsFunc from '../utils/tweets'
 import { ExtendedTweet } from "../models/tweets"
 //import { ExtendedTweet } from "../models/tweets"
 //import * as userFunc from '../utils/users'
+import sharp from 'sharp'
 
 export const saveLikeToggle = async (req: RequestWithCustomProperties, res: Response) => {
     try {
@@ -48,28 +49,36 @@ export const saveLikeToggle = async (req: RequestWithCustomProperties, res: Resp
 export const saveTweet = async (req: RequestWithCustomProperties, res: Response) => {
     try {
         // throw new Error('error check')
-        const {text, replyingTo} = req.body as {text: string, replyingTo: number}
+        const data = JSON.parse(req.body.tweet)
+        console.log(data)
         const userId = req.userId as string
+        const file = req.file?.buffer || null
         
+        if (file && !data.crop) {
+            throw new Error('Crop options not specified.')
+        }
         const createdAt = Date.now()
 
         const tweet = { 
             userId: userId.toLowerCase(),
-            text,
-            parentId: replyingTo ? replyingTo : null,
+            text: data.text,
+            parentId: data.replyingTo ? data.replyingTo : null,
+            media: file ? await sharp(file).extract({left: Math.round(data.crop.x), top: Math.round(data.crop.y), width: Math.round(data.crop.width), height: Math.round(data.crop.height)}).resize({width: 700, height: 700}).jpeg().toBuffer() : null,
             createdAt: () => `to_timestamp(${createdAt/1000})` //postgres func to_timestamp accepts unix time in sec
         }
+
     
         const insertedResult = await getRepository(Tweets) 
             .createQueryBuilder('tweets')
             .insert()
             .values(tweet)
-            .returning(['tweetId', 'userId','text', 'createdAt', 'parentId'])
+            .returning(['tweetId', 'userId','text', 'createdAt', 'parentId', 'media'])
             .execute();
 
         const tweetFromDB = insertedResult.generatedMaps[0] as ExtendedTweet
         tweetFromDB.replies = []
         tweetFromDB.likes = []
+        tweetFromDB.media = tweetFromDB.media ? true : false
 
         console.log(tweetFromDB)
 
@@ -90,6 +99,25 @@ export const saveTweet = async (req: RequestWithCustomProperties, res: Response)
     }
 }
 
+export const getTweetMedia = async (req: RequestWithCustomProperties, res: Response) => {
+    try {
+        const tweetId = parseInt(req.params.tweetId)
+
+        const tweetsRepo = getRepository(Tweets)
+        const tweet = await tweetsRepo.findOne({tweetId})
+        if (!tweet) {
+            throw new Error('Not found.')
+        }
+
+        let tweetImage = tweet.media
+
+        res.set('Content-Type', 'image/jpeg')
+        res.status(201).send(tweetImage)
+    }
+    catch (err) {
+        res.status(400).json({error: err, status: "error"})
+    }
+}
 // export const getAllTweets = async (req: RequestWithCustomProperties, res: Response) => { //implementation using relations
 //     try {
 //         const userId = req.userId as string

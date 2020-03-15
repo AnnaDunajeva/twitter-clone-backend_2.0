@@ -4,18 +4,18 @@ import {TweetsInterface, ExtendedTweet, FormatedTweet} from '../models/tweets' /
 //import {smallTweetAuthor} from '../models/tweets'
 import {v4 as uuidv4} from 'uuid';
 
-const URL = 'http://localhost:3001/user'
+const URL = 'http://localhost:3001'
 
 export const formatUser = (user: ExtendedUser) => {
     const formatedUser: FormatedUser = {
         userId: user.userId,
         firstName: user.firstName,
         lastName: user.lastName,
-        avatar: user.avatar ?`${URL}/${user.userId}/avatar?${uuidv4()}`: `${URL}/${user.userId}/avatar/default`,
+        avatar: user.avatar ?`${URL}/user/${user.userId}/avatar?${uuidv4()}`: `${URL}/user/${user.userId}/avatar/default`,
         createdAt: Date.parse(user.createdAt),
         backgroundColor: user.backgroundColor,
     //   backgroundImage: user.backgroundImage?.toString('base64') || null,
-        backgroundImage: user.backgroundImage ? `${URL}/${user.userId}/background?${uuidv4()}` : null,
+        backgroundImage: user.backgroundImage ? `${URL}/user/${user.userId}/background?${uuidv4()}` : null,
         description: user.description,
         location: user.location,
         followersCount: user.followersCount,
@@ -55,6 +55,7 @@ export const formatTweet = (tweet: ExtendedTweet, userId: string) => {
         user: tweet.userId,
         createdAt: Date.parse(tweet.createdAt),
         text: tweet.text,
+        media: tweet.media ? `${URL}/user/tweet/${tweet.tweetId}/media` : null, 
         replyingToUserId: tweet.parentAuthorData ? tweet.parentAuthorData.userId : null,
         replyingToUserName: tweet.parentAuthorData ? tweet.parentAuthorData.name || `${tweet.parentAuthorData.firstName} ${tweet.parentAuthorData.lastName}` : null,
         replyingToTweetId: tweet.parentId,

@@ -1,7 +1,7 @@
 import {Router, Response, Request, NextFunction} from 'express'
 import multer, { FileFilterCallback } from 'multer'
 //import path from 'path'
-import {getPaginatedFeed, saveTweet, getConversationPaginated, getUserTweetsPaginated, saveLikeToggle} from '../controllers/tweets' //saveLikeToggle, getTweet, getTweetsbyId, getAllTweetsIds, 
+import {getPaginatedFeed, saveTweet, getConversationPaginated, getUserTweetsPaginated, saveLikeToggle, getTweetMedia} from '../controllers/tweets' //saveLikeToggle, getTweet, getTweetsbyId, getAllTweetsIds, 
 import {addUser, getUserProfile, getAllUsersPaginated, updateUser, getUser, getUserAvatar, getUserBackground, getUserAvatarDefault, deleteAvatar, deleteBackground} from '../controllers/users' //getUser, getAllUsers, updateUser, getUsersByIds, getUserTweetsPaginated, getRepliesPaginated
 import {login, logout, logoutAll} from '../controllers/authentication'
 import {authentication} from '../middleware/authentication'
@@ -50,7 +50,9 @@ router.get('/user/feed',authentication, getPaginatedFeed)
 router.get('/users/:userId/tweets', authentication, getUserTweetsPaginated)
 router.get('/user/tweets/:tweetId/conversation', authentication, getConversationPaginated)
 
-router.post('/user/tweet', authentication, saveTweet)
+router.get('/user/tweet/:tweetId/media', getTweetMedia)
+
+router.post('/user/tweet', authentication, upload.single('file'), saveTweet, (err: Error, req: Request, res: Response, next: NextFunction) => res.status(400).json({error: err.message, status: "error"}))
 // router.delete('/user/tweet/:tweetId')
 
 router.post('/user/tweets/like/:tweetId', authentication, saveLikeToggle)

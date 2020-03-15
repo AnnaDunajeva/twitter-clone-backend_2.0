@@ -12,6 +12,7 @@ export interface FormatedTweet {
     repliesCount: number;
     likesCount: number;
     liked: boolean;    
+    media: string | null;
     sortindex?: number;
     type?: string;
 }
@@ -28,6 +29,7 @@ export interface ExtendedTweet {
     parentId: number | null;
     replies: Tweets[];
     likes: Likes[];
+    media: Boolean;
     sortindex?: number;
     parentAuthorData?: smallTweetAuthor;
     type?: string;
