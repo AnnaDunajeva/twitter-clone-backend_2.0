@@ -42,9 +42,9 @@ export interface UsersInterface {
 export interface UpdateUserData {
     firstName?: string;
     lastName?: string;
-    avatar?: Buffer;
+    avatar?: Buffer | null;
     backgroundColor?: string;
-    backgroundImage?: Buffer;
+    backgroundImage?: Buffer | null;
     description?: string;
     location?: string;
     email?: string;

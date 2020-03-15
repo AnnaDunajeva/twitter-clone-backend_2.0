@@ -2,7 +2,7 @@ import {Router, Response, Request, NextFunction} from 'express'
 import multer, { FileFilterCallback } from 'multer'
 //import path from 'path'
 import {getPaginatedFeed, saveTweet, getConversationPaginated, getUserTweetsPaginated, saveLikeToggle} from '../controllers/tweets' //saveLikeToggle, getTweet, getTweetsbyId, getAllTweetsIds, 
-import {addUser, getUserProfile, getAllUsersPaginated, updateUser, getUser, getUserAvatar, getUserBackground, getUserAvatarDefault} from '../controllers/users' //getUser, getAllUsers, updateUser, getUsersByIds, getUserTweetsPaginated, getRepliesPaginated
+import {addUser, getUserProfile, getAllUsersPaginated, updateUser, getUser, getUserAvatar, getUserBackground, getUserAvatarDefault, deleteAvatar, deleteBackground} from '../controllers/users' //getUser, getAllUsers, updateUser, getUsersByIds, getUserTweetsPaginated, getRepliesPaginated
 import {login, logout, logoutAll} from '../controllers/authentication'
 import {authentication} from '../middleware/authentication'
 import {addFollowing, getFollowings, deleteFollowing, getFollowers} from '../controllers/followings'
@@ -34,6 +34,8 @@ router.get('/user', authentication, getUserProfile)
 router.get('/user/:userId/avatar', getUserAvatar) //donno, no auth kinda sucks, but twitter doesnt have it either
 router.get('/user/:userId/avatar/default', getUserAvatarDefault) //donno, no auth kinda sucks, but twitter doesnt have it either
 router.get('/user/:userId/background', getUserBackground)
+router.delete('/user/avatar', authentication, deleteAvatar)
+router.delete('/user/background', authentication, deleteBackground)
 router.get('/users', authentication, getAllUsersPaginated) //without authed user
 
 // router.patch('/user', authentication, updateUser)

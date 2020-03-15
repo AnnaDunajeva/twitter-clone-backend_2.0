@@ -261,6 +261,32 @@ export const updateUser = async (req: RequestWithCustomProperties, res: Response
     }
 }
 
+export const deleteAvatar = async (req: RequestWithCustomProperties, res: Response) => {
+    try {
+        const userId = req.userId as string
+        await users.updateUser(userId, {avatar: null})
+        const newUserProfile = await users.getUserProfile(userId)
+
+        res.status(201).json({user: newUserProfile, status: "ok"})
+    }
+    catch (err) {
+        console.log(err)
+        res.status(400).json({error: err.message, status: "error"}) 
+    }
+}
+export const deleteBackground = async (req: RequestWithCustomProperties, res: Response) => {
+    try {
+        const userId = req.userId as string
+        await users.updateUser(userId, {backgroundImage: null})
+        const newUserProfile = await users.getUserProfile(userId)
+
+        res.status(201).json({user: newUserProfile, status: "ok"})
+    }
+    catch (err) {
+        console.log(err)
+        res.status(400).json({error: err.message, status: "error"}) 
+    }
+}
 // export const getUsersByIds = async (req: RequestWithCustomProperties, res: Response) => { 
 //     try {
 //         const userIds = req.body.users as string[]
