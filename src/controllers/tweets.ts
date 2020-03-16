@@ -17,6 +17,7 @@ export const saveLikeToggle = async (req: RequestWithCustomProperties, res: Resp
     try {
         // const {hasLiked} = req.body as {hasLiked: boolean}
         const userId = req.userId as string
+        console.log(userId)
         const tweetId = parseInt(req.params.tweetId)
 
         const tweet = await tweetsFunc.getTweetsbyId(userId, [tweetId])
@@ -222,7 +223,8 @@ export const getPaginatedFeed = async (req: RequestWithCustomProperties, res: Re
 export const getUserTweetsPaginated = async (req: RequestWithCustomProperties, res: Response) => {
     try{
         console.log('inside getUserTweetsPaginated')
-        const userId = req.params.userId
+        const userId = req.userId as string
+        const user = req.params.userId
         const take = parseInt(req.query.take)
         const skip = parseInt(req.query.skip)
         const getUsers = req.query.getUsers === 'true' ? true : false
@@ -234,7 +236,7 @@ export const getUserTweetsPaginated = async (req: RequestWithCustomProperties, r
             throw new Error('missing pagination parameters')
         }
 
-        const userTweets = await tweetsFunc.getUserTweetsPaginated(userId,skip, take, firstRequestTime, userId, getUsers, getParents)
+        const userTweets = await tweetsFunc.getUserTweetsPaginated(userId, skip, take, firstRequestTime, user, getUsers, getParents)
         res.status(201).json({...userTweets, status: "ok"})
     }
     catch(err) {
@@ -260,6 +262,30 @@ export const getConversationPaginated = async (req: RequestWithCustomProperties,
 
         const response = await tweetsFunc.getConversationPaginated(userId, skip, take, firstRequestTime, parentId, getUsers, getMainTweet)
         res.status(201).json({...response, status: "ok"})
+    }
+    catch(err) {
+        res.status(500).json({error: err.message, status: "error"})
+    }
+}
+
+export const getUserTweetImagesPaginates = async (req: RequestWithCustomProperties, res: Response) => {
+    try{
+        console.log('inside getUserTweetImagesPaginates')
+        const userId = req.userId as string
+        const user = req.params.userId
+        const take = parseInt(req.query.take)
+        const skip = parseInt(req.query.skip)
+        const getUsers = req.query.getUsers === 'true' ? true : false
+        const getParents = req.query.getParents === 'true' ? true : false
+        const firstRequestTime = parseInt(req.query.time)
+        console.log(take, skip, firstRequestTime)
+
+        if (isNaN(take) || isNaN(skip) || isNaN(firstRequestTime) || take === undefined || skip === undefined || firstRequestTime === undefined) {
+            throw new Error('missing pagination parameters')
+        }
+
+        const userTweets = await tweetsFunc.getUserTweetImagesPaginates(userId,skip, take, firstRequestTime, user, getUsers, getParents)
+        res.status(201).json({...userTweets, status: "ok"})
     }
     catch(err) {
         res.status(500).json({error: err.message, status: "error"})

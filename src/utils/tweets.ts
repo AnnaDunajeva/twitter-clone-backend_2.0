@@ -326,3 +326,58 @@ export const getConversationPaginated = async (userId: string, skip: number, tak
 
     return response
 }
+
+export const getUserTweetImagesPaginates = async (userId: string, skip: number, take: number, firstRequestTime: number, user: string, getUsers: boolean, getParents: boolean) => {
+    const tweetsRepo = getRepository(Tweets) 
+    
+    const tweets = await tweetsRepo
+    .createQueryBuilder('tweets')
+    .leftJoin("tweets.likes", "likes")
+    .leftJoin("tweets.replies", "replies")
+    .where("tweets.userId = :userId", {userId: user})
+    .andWhere(`tweets.media IS NOT NULL`)
+    .andWhere(`tweets.createdAt < to_timestamp(${firstRequestTime/1000})`)
+    .select(['tweets', 'likes.userId', 'replies.tweetId'])
+    .orderBy("tweets.createdAt", "DESC")
+    .take(take)
+    .skip(skip)
+    .getMany()
+
+    if (tweets.length === 0) {
+        return {
+            tweets: {},
+            users: {}
+        }
+    }
+
+    const parentTweetIds = uniq(tweets.filter(tweet => tweet.parentId !== null).map(tweet => tweet.parentId!))
+    const parentAuthorData = parentTweetIds.length !== 0 ?  await getTweetsAuthorDataSmall(parentTweetIds) : {}
+
+    const tweetsWithParentAuthorData = tweets.map(tweet => {
+        const newTweet: ExtendedTweet = {
+            ...tweet,
+            sortindex: Date.parse(tweet.createdAt),
+            media: tweet.media ? true : false
+        }
+        if (tweet.parentId) {
+            newTweet.parentAuthorData = parentAuthorData[tweet.parentId]
+        }
+        return newTweet
+    })
+
+    const formatedTweets = formatTweetsFromDB(tweetsWithParentAuthorData, userId)
+
+    const response: TweetsResponse = {tweets: formatedTweets, users: {}}
+
+    if (getUsers) {
+        const userIds = uniq(tweets.map(tweet => tweet.userId))
+        const users = await usersFunctions.getUsersByIds(userId, userIds)
+        response.users = users
+    }
+    if (getParents) {
+        const parentTweets = parentTweetIds.length > 0 ? await getTweetsbyId(userId, parentTweetIds) : {}
+        response.parents = parentTweets
+    }
+
+    return response
+}

@@ -50,6 +50,7 @@ export const formatUser = (user: ExtendedUser) => {
 // }
 
 export const formatTweet = (tweet: ExtendedTweet, userId: string) => {
+    // console.log(tweet.likes, tweet.likes.map(like => like.userId), userId)
     const formatedTweet: FormatedTweet = {
         id: tweet.tweetId,
         user: tweet.userId,
