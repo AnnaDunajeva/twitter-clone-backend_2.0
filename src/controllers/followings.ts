@@ -35,10 +35,22 @@ export const addFollowing = async (req: RequestWithCustomProperties, res: Respon
         const followingId = req.params.userId
         const userId = req.userId as string
         const followingsRepo = getRepository(Followings)
-        const following = new Followings()
-        following.userId = userId
-        following.followingId = followingId
-        await followingsRepo.save(following)
+        const createdAt = Date.now()
+        const following = { 
+            userId: userId.toLowerCase(),
+            followingId,
+            createdAt: () => `to_timestamp(${createdAt/1000})` //postgres func to_timestamp accepts unix time in sec
+        }
+        await followingsRepo
+        .createQueryBuilder('followings')
+        .insert()
+        .values(following)
+        .execute();
+        // const following = new Followings()
+        // following.userId = userId
+        // following.followingId = followingId
+        // following.createdAt = `to_timestamp(${Date.now()/1000})` //postgres func to_timestamp accepts unix time in sec
+        // await followingsRepo.save(following)
         // const userProfile = await users.getUserProfile(userId)
         const updatedUsers = await users.getUsersByIds(userId, [userId, followingId])
         res.status(200).json({users: updatedUsers, status: "ok"})

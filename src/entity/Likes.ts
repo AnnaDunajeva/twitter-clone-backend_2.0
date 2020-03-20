@@ -1,4 +1,4 @@
-import {Entity, ManyToOne, PrimaryColumn, JoinColumn} from "typeorm";
+import {Entity, ManyToOne, PrimaryColumn, JoinColumn, Column} from "typeorm";
 import { Tweets } from "./Tweets";
 import { Users } from "./Users";
 
@@ -13,6 +13,12 @@ export class Likes {
 
     @PrimaryColumn()
     userId!: string
+
+    @Column('timestamp with time zone')
+    createdAt!: string; 
+
+    @Column({nullable: true, type: 'timestamp with time zone'})
+    deletedAt!: string | null;
 
     @ManyToOne(() => Tweets, tweets => tweets.likes)
     @JoinColumn({name: 'tweetId'})

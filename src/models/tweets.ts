@@ -3,18 +3,19 @@ import { Tweets } from "../entity/Tweets";
 
 export interface FormatedTweet {
     id: number;
-    user: string;
-    createdAt: number;
-    text: string;
-    replyingToUserId: string | null;
-    replyingToUserName: string | null;
-    replyingToTweetId: number | null;
-    repliesCount: number;
-    likesCount: number;
-    liked: boolean;    
-    media: string | null;
+    user?: string;
+    createdAt?: number;
+    text?: string;
+    replyingToUserId?: string | null;
+    replyingToUserName?: string | null;
+    replyingToTweetId?: number | null;
+    repliesCount?: number;
+    likesCount?: number;
+    liked?: boolean;    
+    media?: string | null;
     sortindex?: number;
     type?: string;
+    deleted?: boolean;
 }
 
 export interface TweetsInterface {
@@ -23,23 +24,24 @@ export interface TweetsInterface {
 
 export interface ExtendedTweet {
     tweetId: number;
-    userId: string;
-    text: string;
-    createdAt: string;
-    parentId: number | null;
-    replies: Tweets[];
-    likes: Likes[];
-    media: Boolean;
+    userId?: string;
+    text?: string;
+    createdAt?: string;
+    deletedAt?: string | null;
+    parentId?: number | null;
+    replies?: Tweets[];
+    likes?: Likes[];
+    media?: Boolean;
     sortindex?: number;
     parentAuthorData?: smallTweetAuthor;
     type?: string;
 }
 export interface ExtendedTweetsInterface {
-    [key: number]: ExtendedTweet
+    [key: number]: ExtendedTweet;
 }
 
 export interface smallTweetAuthorInterface {
-    [key: string]: smallTweetAuthor
+    [key: string]: smallTweetAuthor;
 }
 export interface smallTweetAuthor {
     tweetId: number;

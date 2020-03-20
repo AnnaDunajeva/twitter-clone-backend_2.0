@@ -20,6 +20,9 @@ export class Tweets {
     @Column('timestamp with time zone')
     createdAt!: string;
     
+    @Column({nullable: true, type: 'timestamp with time zone'})
+    deletedAt!: string | null;
+    
     //@Column({nullable: true, type: "varchar" }) //Otherwise, TypeORM can't guess that type correctly (assumes Object) and Results in Data type "Object" in "Article.title" is not supported by "postgres".
     @Column({nullable: true, type: "bigint" }) 
     parentId!: number | null;

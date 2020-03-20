@@ -51,27 +51,34 @@ export const formatUser = (user: ExtendedUser) => {
 
 export const formatTweet = (tweet: ExtendedTweet, userId: string) => {
     // console.log(tweet.likes, tweet.likes.map(like => like.userId), userId)
-    const formatedTweet: FormatedTweet = {
-        id: tweet.tweetId,
-        user: tweet.userId,
-        createdAt: Date.parse(tweet.createdAt),
-        text: tweet.text,
-        media: tweet.media ? `${URL}/user/tweet/${tweet.tweetId}/media` : null, 
-        replyingToUserId: tweet.parentAuthorData ? tweet.parentAuthorData.userId : null,
-        replyingToUserName: tweet.parentAuthorData ? tweet.parentAuthorData.name || `${tweet.parentAuthorData.firstName} ${tweet.parentAuthorData.lastName}` : null,
-        replyingToTweetId: tweet.parentId,
-        repliesCount: tweet.replies.length,
-        likesCount: tweet.likes.length,
-        liked: tweet.likes.map(like => like.userId).includes(userId)
+    if (tweet.deletedAt) {
+        const deletedTweet: FormatedTweet = {id: tweet.tweetId, deleted: true}
+        return deletedTweet
+    } else {
+        const formatedTweet: FormatedTweet = {
+            id: tweet.tweetId,
+            user: tweet.userId,
+            createdAt: Date.parse(tweet.createdAt as string),
+            text: tweet.text,
+            media: tweet.media ? `${URL}/user/tweet/${tweet.tweetId}/media` : null, 
+            replyingToUserId: tweet.parentAuthorData ? tweet.parentAuthorData.userId : null,
+            replyingToUserName: tweet.parentAuthorData ? tweet.parentAuthorData.name || `${tweet.parentAuthorData.firstName} ${tweet.parentAuthorData.lastName}` : null,
+            replyingToTweetId: tweet.parentId,
+            repliesCount: tweet.replies!.length,
+            likesCount: tweet.likes!.length,
+            liked: tweet.likes!.map(like => like.userId).includes(userId)
+        }
+        if (tweet.hasOwnProperty('sortindex')) {
+          formatedTweet.sortindex = tweet.sortindex
+        } else {
+            formatedTweet.sortindex = Date.parse(tweet.createdAt as string)
+        }
+        if (tweet.hasOwnProperty('type')) {
+          formatedTweet.type = tweet.type
+        }
+    
+        return formatedTweet
     }
-    if (tweet.hasOwnProperty('sortindex')) {
-      formatedTweet.sortindex = tweet.sortindex
-    }
-    if (tweet.hasOwnProperty('type')) {
-      formatedTweet.type = tweet.type
-    }
-
-    return formatedTweet
 }
 
 export const formatTweetsFromDB = (tweets: ExtendedTweet[], userId: string) => {

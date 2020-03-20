@@ -21,12 +21,24 @@ export const saveLikeToggle = async (req: RequestWithCustomProperties, res: Resp
         const tweetId = parseInt(req.params.tweetId)
 
         const tweet = await tweetsFunc.getTweetsbyId(userId, [tweetId])
+        const createdAt = Date.now()
 
         if (!tweet[tweetId].liked) {
-            const like  = new Likes()
-            like.userId = userId
-            like.tweetId = tweetId
-            await getRepository(Likes).save(like)
+            const like = { 
+                userId: userId.toLowerCase(),
+                tweetId,
+                createdAt: () => `to_timestamp(${createdAt/1000})` //postgres func to_timestamp accepts unix time in sec
+            }
+            await getRepository(Likes) 
+            .createQueryBuilder('likes')
+            .insert()
+            .values(like)
+            .execute();
+            // const like  = new Likes()
+            // like.userId = userId
+            // like.tweetId = tweetId
+            // like.createdAt = `to_timestamp(${Date.now()/1000})` //postgres func to_timestamp accepts unix time in sec
+            // await getRepository(Likes).save(like)
                 
         } else {
             await getRepository(Likes)
@@ -38,7 +50,7 @@ export const saveLikeToggle = async (req: RequestWithCustomProperties, res: Resp
         } 
 
         tweet[tweetId].liked = !tweet[tweetId].liked
-        tweet[tweetId].likesCount = tweet[tweetId].liked ? tweet[tweetId].likesCount + 1 : tweet[tweetId].likesCount - 1
+        tweet[tweetId].likesCount = tweet[tweetId].liked ? tweet[tweetId].likesCount as number + 1 : tweet[tweetId].likesCount as number - 1
 
         res.status(201).json({message: "success", status: "ok", tweet: {...tweet}})
     }
@@ -216,6 +228,7 @@ export const getPaginatedFeed = async (req: RequestWithCustomProperties, res: Re
         res.status(201).json({...userFeed, status: "ok"})
     }
     catch(err) {
+        console.log(err)
         res.status(500).json({error: err.message, status: "error"})
     }
 }
@@ -289,5 +302,62 @@ export const getUserTweetImagesPaginates = async (req: RequestWithCustomProperti
     }
     catch(err) {
         res.status(500).json({error: err.message, status: "error"})
+    }
+}
+
+export const getUserTweetLikesPaginates = async (req: RequestWithCustomProperties, res: Response) => {
+    try{
+        const userId = req.userId as string
+        const user = req.params.userId
+        const take = parseInt(req.query.take)
+        const skip = parseInt(req.query.skip)
+        const getUsers = req.query.getUsers === 'true' ? true : false
+        const firstRequestTime = parseInt(req.query.time)
+        console.log(take, skip, firstRequestTime)
+
+        if (isNaN(take) || isNaN(skip) || isNaN(firstRequestTime) || take === undefined || skip === undefined || firstRequestTime === undefined) {
+            throw new Error('missing pagination parameters')
+        }
+
+        const userTweets = await tweetsFunc.getUserTweetLikesPaginates(userId,skip, take, firstRequestTime, user, getUsers)
+        res.status(201).json({...userTweets, status: "ok"})
+    }
+    catch(err) {
+        res.status(500).json({error: err.message, status: "error"})
+    }
+}
+export const getUserRepliesPaginated = async (req: RequestWithCustomProperties, res: Response) => {
+    try{
+        const userId = req.userId as string
+        const user = req.params.userId
+        const take = parseInt(req.query.take)
+        const skip = parseInt(req.query.skip)
+        const getUsers = req.query.getUsers === 'true' ? true : false
+        const firstRequestTime = parseInt(req.query.time)
+        console.log(take, skip, firstRequestTime)
+
+        if (isNaN(take) || isNaN(skip) || isNaN(firstRequestTime) || take === undefined || skip === undefined || firstRequestTime === undefined) {
+            throw new Error('missing pagination parameters')
+        }
+
+        const userTweets = await tweetsFunc.getUserRepliesPaginated(userId, skip, take, firstRequestTime, user, getUsers)
+        res.status(201).json({...userTweets, status: "ok"})
+    }
+    catch(err) {
+        res.status(500).json({error: err.message, status: "error"})
+    }
+}
+
+export const deleteTweet = async (req: RequestWithCustomProperties, res: Response) => {
+    try {
+        const userId = req.userId as string
+        const tweetId = parseInt(req.params.tweetId)
+        await tweetsFunc.deleteTweet(userId, tweetId)
+
+        res.status(201).json({message: 'success', status: "ok"})
+    }
+    catch (err) {
+        console.log(err)
+        res.status(400).json({error: err.message, status: "error"}) 
     }
 }

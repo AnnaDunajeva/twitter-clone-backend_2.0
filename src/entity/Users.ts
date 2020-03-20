@@ -26,6 +26,9 @@ export class Users {
     @Column('timestamp with time zone')
     createdAt!: string;
 
+    @Column({nullable: true, type: 'timestamp with time zone'})
+    deletedAt!: string | null;
+
     @Column({nullable: true, type: 'varchar'})
     description!: string | null;
 
