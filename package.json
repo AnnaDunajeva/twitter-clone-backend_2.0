@@ -19,6 +19,7 @@
       "@types/lodash": "^4.14.149",
       "@types/multer": "^1.4.2",
       "@types/sharp": "^0.24.0",
+      "@types/socket.io": "^2.1.4",
       "bcrypt": "^3.0.8",
       "body-parser": "^1.19.0",
       "cors": "^2.8.5",
@@ -30,6 +31,7 @@
       "query-string": "^6.10.1",
       "reflect-metadata": "^0.1.13",
       "sharp": "^0.25.1",
+      "socket.io": "^2.3.0",
       "typeorm": "0.2.22",
       "uuid": "^3.4.0"
    },

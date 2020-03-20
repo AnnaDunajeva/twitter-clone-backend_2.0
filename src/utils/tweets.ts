@@ -53,8 +53,8 @@ export const getTweetsbyId = async (userId: string, ids: number[]) => {
     const tweetRepo = getRepository(Tweets)
     const tweetsWithDeleted  = await tweetRepo //I have no clue what am i doing here...
     .createQueryBuilder("tweets")
-    .leftJoin("tweets.likes", "likes")
-    .leftJoin("tweets.replies", "replies")
+    .leftJoin("tweets.likes", "likes") //need to account for deleted likes
+    .leftJoin("tweets.replies", "replies") //need to accout for deleted tweets
     .where("tweets.tweetId IN (:...ids)", { ids: ids })
     .select(['tweets', 'likes.userId', 'replies.tweetId'])
     .getMany()
@@ -458,8 +458,8 @@ export const getUserRepliesPaginated = async (userId: string, skip: number, take
     
     const tweets = await tweetsRepo
     .createQueryBuilder('tweets')
-    .leftJoin("tweets.likes", "likes")
-    .leftJoin("tweets.replies", "replies")
+    .leftJoin("tweets.likes", "likes") //nedd also to account for deleted likes
+    .leftJoin("tweets.replies", "replies") //nedd also to account for deleted tweets
     .where("tweets.userId = :userId", {userId: user})
     .andWhere("tweets.parentId is not null")
     .andWhere('tweets.deletedAt is null')

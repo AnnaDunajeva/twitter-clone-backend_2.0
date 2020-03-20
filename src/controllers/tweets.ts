@@ -12,8 +12,9 @@ import { ExtendedTweet } from "../models/tweets"
 //import { ExtendedTweet } from "../models/tweets"
 //import * as userFunc from '../utils/users'
 import sharp from 'sharp'
+import {IoFuncInterface} from '../models/ioFuncs'
 
-export const saveLikeToggle = async (req: RequestWithCustomProperties, res: Response) => {
+export const saveLikeToggle = async (req: RequestWithCustomProperties, res: Response, ioFuncs: IoFuncInterface) => {
     try {
         // const {hasLiked} = req.body as {hasLiked: boolean}
         const userId = req.userId as string
@@ -21,6 +22,9 @@ export const saveLikeToggle = async (req: RequestWithCustomProperties, res: Resp
         const tweetId = parseInt(req.params.tweetId)
 
         const tweet = await tweetsFunc.getTweetsbyId(userId, [tweetId])
+        if (tweet[tweetId].deleted) {
+            throw new Error('Could not add like for deleted tweet. Please refresh page.')
+        }
         const createdAt = Date.now()
 
         if (!tweet[tweetId].liked) {
@@ -52,6 +56,8 @@ export const saveLikeToggle = async (req: RequestWithCustomProperties, res: Resp
         tweet[tweetId].liked = !tweet[tweetId].liked
         tweet[tweetId].likesCount = tweet[tweetId].liked ? tweet[tweetId].likesCount as number + 1 : tweet[tweetId].likesCount as number - 1
 
+        ioFuncs.sendTweetUpdate(tweetId, tweet)
+        
         res.status(201).json({message: "success", status: "ok", tweet: {...tweet}})
     }
     catch (err) {
@@ -59,7 +65,7 @@ export const saveLikeToggle = async (req: RequestWithCustomProperties, res: Resp
     }
 }
 
-export const saveTweet = async (req: RequestWithCustomProperties, res: Response) => {
+export const saveTweet = async (req: RequestWithCustomProperties, res: Response, ioFuncs: IoFuncInterface) => {
     try {
         // throw new Error('error check')
         const data = JSON.parse(req.body.tweet)
@@ -70,6 +76,13 @@ export const saveTweet = async (req: RequestWithCustomProperties, res: Response)
         if (file && !data.crop) {
             throw new Error('Crop options not specified.')
         }
+        if (data.replyingTo) {
+            const parent = await tweetsFunc.getTweetsbyId(userId, [data.replyingTo])
+            if (parent[data.replyingTo].deleted) {
+                throw new Error('Could not leave reply for deleted tweet. Please refresh page.')
+            }
+        }
+
         const createdAt = Date.now()
 
         const tweet = { 
@@ -98,6 +111,8 @@ export const saveTweet = async (req: RequestWithCustomProperties, res: Response)
         if (tweet.parentId) {
             const parentAuthorData = await tweetsFunc.getTweetsAuthorDataSmall([tweetFromDB.parentId!])
             tweetFromDB.parentAuthorData = parentAuthorData[tweetFromDB.parentId!]
+            const parentTweet = await tweetsFunc.getTweetsbyId(userId, [tweet.parentId])
+            ioFuncs.sendTweetUpdate(tweet.parentId, parentTweet)
         }
 
         res.status(201).json({
@@ -348,11 +363,15 @@ export const getUserRepliesPaginated = async (req: RequestWithCustomProperties, 
     }
 }
 
-export const deleteTweet = async (req: RequestWithCustomProperties, res: Response) => {
+export const deleteTweet = async (req: RequestWithCustomProperties, res: Response, ioFuncs: IoFuncInterface) => {
     try {
         const userId = req.userId as string
         const tweetId = parseInt(req.params.tweetId)
         await tweetsFunc.deleteTweet(userId, tweetId)
+
+        const deletedFormatedTweet = await tweetsFunc.getTweetsbyId(userId, [tweetId])
+
+        ioFuncs.sendTweetUpdate(tweetId, deletedFormatedTweet)
 
         res.status(201).json({message: 'success', status: "ok"})
     }
