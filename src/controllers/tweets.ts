@@ -13,6 +13,7 @@ import { ExtendedTweet } from "../models/tweets"
 //import * as userFunc from '../utils/users'
 import sharp from 'sharp'
 import {IoFuncInterface} from '../models/ioFuncs'
+import {pick} from 'lodash'
 
 export const saveLikeToggle = async (req: RequestWithCustomProperties, res: Response, ioFuncs: IoFuncInterface) => {
     try {
@@ -23,7 +24,7 @@ export const saveLikeToggle = async (req: RequestWithCustomProperties, res: Resp
 
         const tweet = await tweetsFunc.getTweetsbyId(userId, [tweetId])
         if (tweet[tweetId].deleted) {
-            throw new Error('Could not add like for deleted tweet. Please refresh page.')
+            throw new Error('Could not add like for deleted tweet.')
         }
         const createdAt = Date.now()
 
@@ -56,7 +57,11 @@ export const saveLikeToggle = async (req: RequestWithCustomProperties, res: Resp
         tweet[tweetId].liked = !tweet[tweetId].liked
         tweet[tweetId].likesCount = tweet[tweetId].liked ? tweet[tweetId].likesCount as number + 1 : tweet[tweetId].likesCount as number - 1
 
-        ioFuncs.sendTweetUpdate(tweetId, tweet)
+        //cant do that because liked is for user who liked, so all tweets who are subscribed thinkthey liked not somebody else. Same with replies
+        //tweet contains data related to user that modifies it, cant just broadcast this tweet like that to everybody who subscribed to it
+        //maybe i should not even manipulate with this tweet that has other user info, but make another func to get tweet that i can broadcast to many users
+                // ioFuncs.sendTweetUpdate(tweetId, tweet)
+        ioFuncs.sendTweetUpdate(tweetId, {[tweetId]: pick(tweet[tweetId], ['id', 'likesCount'])})
         
         res.status(201).json({message: "success", status: "ok", tweet: {...tweet}})
     }
@@ -79,7 +84,7 @@ export const saveTweet = async (req: RequestWithCustomProperties, res: Response,
         if (data.replyingTo) {
             const parent = await tweetsFunc.getTweetsbyId(userId, [data.replyingTo])
             if (parent[data.replyingTo].deleted) {
-                throw new Error('Could not leave reply for deleted tweet. Please refresh page.')
+                throw new Error('Could not leave reply for deleted tweet.')
             }
         }
 
@@ -111,8 +116,9 @@ export const saveTweet = async (req: RequestWithCustomProperties, res: Response,
         if (tweet.parentId) {
             const parentAuthorData = await tweetsFunc.getTweetsAuthorDataSmall([tweetFromDB.parentId!])
             tweetFromDB.parentAuthorData = parentAuthorData[tweetFromDB.parentId!]
-            const parentTweet = await tweetsFunc.getTweetsbyId(userId, [tweet.parentId])
-            ioFuncs.sendTweetUpdate(tweet.parentId, parentTweet)
+            const parentTweet = await tweetsFunc.getTweetsbyIdWithoutDeleted(userId, [tweet.parentId]) //we checked before that parent is not deleted
+            // ioFuncs.sendTweetUpdate(tweet.parentId, parentTweet)
+            ioFuncs.sendTweetUpdate(tweet.parentId, {[tweet.parentId]: pick(parentTweet[tweet.parentId], ['id', 'repliesCount'])})
         }
 
         res.status(201).json({
@@ -338,6 +344,7 @@ export const getUserTweetLikesPaginates = async (req: RequestWithCustomPropertie
         res.status(201).json({...userTweets, status: "ok"})
     }
     catch(err) {
+        console.log(err)
         res.status(500).json({error: err.message, status: "error"})
     }
 }
@@ -367,10 +374,19 @@ export const deleteTweet = async (req: RequestWithCustomProperties, res: Respons
     try {
         const userId = req.userId as string
         const tweetId = parseInt(req.params.tweetId)
+        
+        const tweetToDelete = await tweetsFunc.getTweetsbyId(userId, [tweetId])
+        if (tweetToDelete[tweetId].deleted) {
+            throw new Error('Tweet already deleted.')
+        }
         await tweetsFunc.deleteTweet(userId, tweetId)
-
         const deletedFormatedTweet = await tweetsFunc.getTweetsbyId(userId, [tweetId])
 
+        const parentTweet = tweetToDelete[tweetId].replyingToTweetId ? await tweetsFunc.getTweetsbyId(userId, [tweetToDelete[tweetId].replyingToTweetId as number]) : null //what if parent tweet was deleted?
+
+        if (parentTweet) {
+            ioFuncs.sendTweetUpdate(tweetToDelete[tweetId].replyingToTweetId as number, parentTweet)
+        }
         ioFuncs.sendTweetUpdate(tweetId, deletedFormatedTweet)
 
         res.status(201).json({message: 'success', status: "ok"})

@@ -31,8 +31,8 @@ const upload = multer({
 export const createRouter = (io: SocketIO.Server) => {
 
     const sendTweetUpdate = (tweetId: number, tweet: TweetsInterface) => {
-        console.log('about to send tweet update ', tweetId)
-        io.to(tweetId.toString()).emit('tweet_update', tweet)
+        // console.log('about to send tweet update ', tweetId)
+        io.to(tweetId.toString()).emit('tweet_update', {tweetId, tweet})
     }
     const ioFuncs: IoFuncInterface = {
         sendTweetUpdate

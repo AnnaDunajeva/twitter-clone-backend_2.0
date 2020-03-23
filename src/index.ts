@@ -31,25 +31,14 @@ const setUpSocketIo = (server: http.Server) => {
 
    io.sockets.on('connection', function(socket) {
       socket.on('subscribe_to_tweet_update', function(roomId: number | string) {
-         console.log('about to join ', roomId)
+         // console.log('about to join ', roomId)
          socket.join(roomId.toString());
       });
       socket.on('unsubscribe_to_tweet_update', function(roomId: number | string) {
-         console.log('about to leave ', roomId)
+         // console.log('about to leave ', roomId)
          socket.leave(roomId.toString());
       });
    });
-
-   // io.on('subscribe_to_tweet_update', (socketId: string, roomId: number | string) => {
-   //    console.log('about to join ', roomId)
-   //    const socket = io.sockets.connected[socketId]
-   //    socket.join(roomId.toString());
-   // })
-   // io.on('unsubscribe_to_tweet_update', (socketId: string, roomId: number | string) => {
-   //    console.log('about to leave ', roomId)
-   //    const socket = io.sockets.connected[socketId]
-   //    socket.leave(roomId.toString());
-   // })
    return io
 }
 

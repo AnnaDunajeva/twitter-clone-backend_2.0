@@ -46,16 +46,16 @@ import {uniq, mapValues} from 'lodash'
 // }
 
 export const getTweetsbyId = async (userId: string, ids: number[]) => {
-    console.log('getTweetsbyId ', ids)
     if (ids.length === 0) {
         return {}
     }
     const tweetRepo = getRepository(Tweets)
     const tweetsWithDeleted  = await tweetRepo //I have no clue what am i doing here...
     .createQueryBuilder("tweets")
-    .leftJoin("tweets.likes", "likes") //need to account for deleted likes
-    .leftJoin("tweets.replies", "replies") //need to accout for deleted tweets
+    .leftJoin("tweets.likes", "likes", "likes.deletedAt is null") //need to account for deleted likes
+    .leftJoin("tweets.replies", "replies", "replies.deletedAt is null") //need to accout for deleted tweets
     .where("tweets.tweetId IN (:...ids)", { ids: ids })
+    // .andWhere('tweets.deletedAt is null')
     .select(['tweets', 'likes.userId', 'replies.tweetId'])
     .getMany()
 
@@ -88,12 +88,48 @@ export const getTweetsbyId = async (userId: string, ids: number[]) => {
 
     const formatedTweets = formatTweetsFromDB(tweetsWithParentAuthorData, userId)
     const formatedDeletedTweets = formatTweetsFromDB(deletedTweets, userId)
-    deletedTweets.forEach(
-        tweet => formatedTweets[tweet.tweetId] = {
-            id: tweet.tweetId,
-            deleted: true
-    })
+    // deletedTweets.forEach(
+    //     tweet => formatedTweets[tweet.tweetId] = {
+    //         id: tweet.tweetId,
+    //         deleted: true
+    // })
     return {...formatedTweets, ...formatedDeletedTweets}
+}
+export const getTweetsbyIdWithoutDeleted = async (userId: string, ids: number[]) => {
+    if (ids.length === 0) {
+        return {}
+    }
+    const tweetRepo = getRepository(Tweets)
+    const tweets  = await tweetRepo //I have no clue what am i doing here...
+    .createQueryBuilder("tweets")
+    .leftJoin("tweets.likes", "likes", "likes.deletedAt is null") //need to account for deleted likes
+    .leftJoin("tweets.replies", "replies", "replies.deletedAt is null") //need to accout for deleted tweets
+    .where("tweets.tweetId IN (:...ids)", { ids: ids })
+    .andWhere('tweets.deletedAt is null')
+    .select(['tweets', 'likes.userId', 'replies.tweetId'])
+    .getMany()
+
+    if (tweets.length === 0) {
+        return {}
+    }
+
+    const parentTweetIds = uniq(tweets.filter(tweet => tweet.parentId !== null).map(tweet => tweet.parentId!))
+    const parentAuthorData = parentTweetIds.length !== 0 ?  await getTweetsAuthorDataSmall(parentTweetIds) : {}
+
+    const tweetsWithParentAuthorData = tweets.map(tweet => {
+        const newTweet: ExtendedTweet = {
+            ...tweet,
+            media: tweet.media ? true : false
+        }
+        if (tweet.parentId) {
+            newTweet.parentAuthorData = parentAuthorData[tweet.parentId]
+        }
+        return newTweet
+    })
+
+    const formatedTweets = formatTweetsFromDB(tweetsWithParentAuthorData, userId)
+
+    return formatedTweets
 }
 
 // export const getTweetsByIdWithOptionalParameters = async (ids: string[], getUsers: boolean, getParents: boolean) => {
@@ -180,8 +216,8 @@ export const getPaginatedUserFeed = async (userId: string, skip: number, take: n
 
     const tweets = await tweetsRepo
     .createQueryBuilder('tweets')
-    .leftJoin("tweets.likes", "likes")
-    .leftJoin("tweets.replies", "replies")
+    .leftJoin("tweets.likes", "likes", "likes.deletedAt is null")
+    .leftJoin("tweets.replies", "replies", "replies.deletedAt is null")
     .where(new Brackets(qb => {
         qb.where((qb: SelectQueryBuilder<Tweets>) => {
             const subQuery = qb.subQuery()
@@ -249,8 +285,8 @@ export const getUserTweetsPaginated = async (userId: string, skip: number, take:
     
     const tweets = await tweetsRepo
     .createQueryBuilder('tweets')
-    .leftJoin("tweets.likes", "likes")
-    .leftJoin("tweets.replies", "replies")
+    .leftJoin("tweets.likes", "likes", "likes.deletedAt is null")
+    .leftJoin("tweets.replies", "replies", "replies.deletedAt is null")
     .where("tweets.userId = :userId", {userId: user})
     .andWhere("tweets.parentId is null")
     .andWhere('tweets.deletedAt is null')
@@ -303,7 +339,7 @@ export const getUserTweetsPaginated = async (userId: string, skip: number, take:
 export const getConversationPaginated = async (userId: string, skip: number, take: number, firstRequestTime: number, parentId: number, getUsers: boolean, getMainTweet: boolean) => {
     const tweetsRepo = getRepository(Tweets) 
 
-    let mainTweet =  await getTweetsbyId(userId, [parentId])
+    let mainTweet =  await getTweetsbyId(userId, [parentId]) //we want to know if it was deleted, that why i dont use getTweetsByIdWithoutDeleted
     if (Object.keys(mainTweet).length === 0) {
         return {
             tweets: {},
@@ -322,8 +358,8 @@ export const getConversationPaginated = async (userId: string, skip: number, tak
 
     const replies = await tweetsRepo
     .createQueryBuilder('tweets')
-    .leftJoin("tweets.likes", "likes")
-    .leftJoin("tweets.replies", "replies")
+    .leftJoin("tweets.likes", "likes", "likes.deletedAt is null")
+    .leftJoin("tweets.replies", "replies", "replies.deletedAt is null")
     .where("tweets.parentId = :parentId", {parentId})
     .andWhere('tweets.deletedAt is null')
     .andWhere(`tweets.createdAt < to_timestamp(${firstRequestTime/1000})`)
@@ -366,8 +402,8 @@ export const getUserTweetImagesPaginates = async (userId: string, skip: number, 
     
     const tweets = await tweetsRepo
     .createQueryBuilder('tweets')
-    .leftJoin("tweets.likes", "likes")
-    .leftJoin("tweets.replies", "replies")
+    .leftJoin("tweets.likes", "likes", "likes.deletedAt is null")
+    .leftJoin("tweets.replies", "replies", "replies.deletedAt is null")
     .where("tweets.userId = :userId", {userId: user})
     .andWhere(`tweets.media IS NOT NULL`)
     .andWhere('tweets.parentId IS NULL')
@@ -439,13 +475,21 @@ export const getUserTweetLikesPaginates = async (userId: string, skip: number, t
     }
 
     const likedTweetIds = likes.map(like => like.tweetId)
-    const likedTweets = await getTweetsbyId(userId, likedTweetIds)
+
+    const likedTweets = await getTweetsbyIdWithoutDeleted(userId, likedTweetIds)
+    const likedTweetIdsWithoutDeleted = Object.keys(likedTweets)
+    if (likedTweetIdsWithoutDeleted.length === 0) {
+        return {
+            tweets: {},
+            users: {}
+        }
+    }
     const likedTweetsWithSortindex = mapValues(likedTweets, (tweet)=>({...tweet, sortindex: Date.parse(likes.find((like)=>like.tweetId === tweet.id)!.createdAt)}))
 
     const response: TweetsResponse = {tweets: likedTweetsWithSortindex, users: {}}
 
     if (getUsers) {
-        const userIds = uniq(likedTweetIds.map(tweetId => likedTweets[tweetId].user as string))
+        const userIds = uniq(likedTweetIdsWithoutDeleted.map(tweetId => likedTweets[tweetId].user as string))
         const users = await usersFunctions.getUsersByIds(userId, userIds)
         response.users = users
     }
@@ -458,8 +502,8 @@ export const getUserRepliesPaginated = async (userId: string, skip: number, take
     
     const tweets = await tweetsRepo
     .createQueryBuilder('tweets')
-    .leftJoin("tweets.likes", "likes") //nedd also to account for deleted likes
-    .leftJoin("tweets.replies", "replies") //nedd also to account for deleted tweets
+    .leftJoin("tweets.likes", "likes", "likes.deletedAt is null") //nedd also to account for deleted likes
+    .leftJoin("tweets.replies", "replies", "replies.deletedAt is null") //nedd also to account for deleted tweets
     .where("tweets.userId = :userId", {userId: user})
     .andWhere("tweets.parentId is not null")
     .andWhere('tweets.deletedAt is null')
@@ -506,7 +550,7 @@ export const getUserRepliesPaginated = async (userId: string, skip: number, take
 }
 
 export const deleteTweet = async (userId: string, tweetId: number) => {
-    const tweetToDelete = await getTweetsbyId(userId, [tweetId])
+    const tweetToDelete = await getTweetsbyIdWithoutDeleted(userId, [tweetId])
     if (!tweetToDelete[tweetId]) {
         return; //should i notify user that tweet does not exist?
     }
