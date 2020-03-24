@@ -1,7 +1,7 @@
 import {Router, Response, Request, NextFunction} from 'express'
 import multer, { FileFilterCallback } from 'multer'
 //import path from 'path'
-import {getPaginatedFeed, saveTweet, getConversationPaginated, getUserTweetsPaginated, saveLikeToggle, getTweetMedia, getUserTweetImagesPaginates, getUserTweetLikesPaginates, getUserRepliesPaginated, deleteTweet} from '../controllers/tweets' //saveLikeToggle, getTweet, getTweetsbyId, getAllTweetsIds, 
+import {getPaginatedFeed, getPaginatedFeedUpdate, saveTweet, getConversationPaginated, getUserTweetsPaginated, saveLikeToggle, getTweetMedia, getUserTweetImagesPaginates, getUserTweetLikesPaginates, getUserRepliesPaginated, deleteTweet} from '../controllers/tweets' //saveLikeToggle, getTweet, getTweetsbyId, getAllTweetsIds, 
 import {addUser, getUserProfile, getAllUsersPaginated, updateUser, getUser, getUserAvatar, getUserBackground, getUserAvatarDefault, deleteAvatar, deleteBackground} from '../controllers/users' //getUser, getAllUsers, updateUser, getUsersByIds, getUserTweetsPaginated, getRepliesPaginated
 import {login, logout, logoutAll} from '../controllers/authentication'
 import {authentication} from '../middleware/authentication'
@@ -62,6 +62,7 @@ export const createRouter = (io: SocketIO.Server) => {
     router.get('/users/:userId', authentication, getUser)
 
     router.get('/user/feed',authentication, getPaginatedFeed)
+    router.get('/user/feed/update', authentication, getPaginatedFeedUpdate)
     //router.post('/tweets', authentication, getTweetsbyId) //not very RESTful
     //router.get('/user/tweets/:tweetId', authentication, getTweet)
     router.get('/user/tweets/:tweetId/conversation', authentication, getConversationPaginated)

@@ -55,10 +55,11 @@ export const formatTweet = (tweet: ExtendedTweet, userId: string) => {
         const deletedTweet: FormatedTweet = {id: tweet.tweetId, deleted: true}
         return deletedTweet
     } else {
+        const createdAt = new Date(tweet.createdAt as string)
         const formatedTweet: FormatedTweet = {
             id: tweet.tweetId,
             user: tweet.userId,
-            createdAt: Date.parse(tweet.createdAt as string),
+            createdAt: createdAt.getTime(),
             text: tweet.text,
             media: tweet.media ? `${URL}/user/tweet/${tweet.tweetId}/media` : null, 
             replyingToUserId: tweet.parentAuthorData ? tweet.parentAuthorData.userId : null,

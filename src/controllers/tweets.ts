@@ -4,12 +4,11 @@ import {Likes} from '../entity/Likes'
 import {Response} from 'express' //RequestHandler
 // import uuidv4 from 'uuid/v4'
 // import {TweetsInterface} from '../models/tweets'
-import {formatTweet} from '../utils/helpers'
+// import {formatTweet} from '../utils/helpers'
 import {RequestWithCustomProperties} from '../models/request'
 //import {TweetsResponse} from '../models/reponses'
 import * as tweetsFunc from '../utils/tweets'
-import { ExtendedTweet } from "../models/tweets"
-//import { ExtendedTweet } from "../models/tweets"
+import { ExtendedTweet, TweetsInterface } from "../models/tweets"
 //import * as userFunc from '../utils/users'
 import sharp from 'sharp'
 import {IoFuncInterface} from '../models/ioFuncs'
@@ -81,9 +80,10 @@ export const saveTweet = async (req: RequestWithCustomProperties, res: Response,
         if (file && !data.crop) {
             throw new Error('Crop options not specified.')
         }
+        let parentTweet: TweetsInterface | null = null
         if (data.replyingTo) {
-            const parent = await tweetsFunc.getTweetsbyId(userId, [data.replyingTo])
-            if (parent[data.replyingTo].deleted) {
+            parentTweet = await tweetsFunc.getTweetsbyId(userId, [data.replyingTo])
+            if (parentTweet[data.replyingTo].deleted) {
                 throw new Error('Could not leave reply for deleted tweet.')
             }
         }
@@ -106,26 +106,32 @@ export const saveTweet = async (req: RequestWithCustomProperties, res: Response,
             .returning(['tweetId', 'userId','text', 'createdAt', 'parentId', 'media'])
             .execute();
 
-        const tweetFromDB = insertedResult.generatedMaps[0] as ExtendedTweet
-        tweetFromDB.replies = []
-        tweetFromDB.likes = []
-        tweetFromDB.media = tweetFromDB.media ? true : false
+        //not a good idea cause i add a lot of stuff to tweet like repleyngToUserId and stuff, pain in the ass to do it manualltyhere
+        const insertedTweetRaw = insertedResult.generatedMaps[0] as ExtendedTweet
+        // insertedTweetRaw.replies = []
+        // insertedTweetRaw.likes = []
+        // insertedTweetRaw.media = insertedTweetRaw.media ? true : false
 
-        console.log(tweetFromDB)
+        // console.log(tweetFromDB)
+
+        const newFormatedTweet =  await tweetsFunc.getTweetsbyId(userId, [insertedTweetRaw.tweetId])
 
         res.status(201).json({
-            tweet: {
-                [tweetFromDB.tweetId]: formatTweet(tweetFromDB, userId)
-            },
+            tweet: newFormatedTweet,
             status: "ok"
         })
 
-        if (tweet.parentId) {
-            const parentAuthorData = await tweetsFunc.getTweetsAuthorDataSmall([tweetFromDB.parentId!])
-            tweetFromDB.parentAuthorData = parentAuthorData[tweetFromDB.parentId!]
-            const parentTweet = await tweetsFunc.getTweetsbyIdWithoutDeleted(userId, [tweet.parentId]) //we checked before that parent is not deleted
-            // ioFuncs.sendTweetUpdate(tweet.parentId, parentTweet)
-            ioFuncs.sendTweetUpdate(tweet.parentId, {[tweet.parentId]: pick(parentTweet[tweet.parentId], ['id', 'repliesCount'])})
+        if (parentTweet) {
+            // const parentAuthorData = await tweetsFunc.getTweetsAuthorDataSmall([tweetFromDB.parentId!])
+            // tweetFromDB.parentAuthorData = parentAuthorData[tweetFromDB.parentId!]
+            // const parentTweet = await tweetsFunc.getTweetsbyIdWithoutDeleted(userId, [tweet.parentId]) //we checked before that parent is not deleted
+            const updatedParentTweet = {
+                [tweet.parentId]: {
+                    id: parentTweet[tweet.parentId].id,
+                    repliesCount: parentTweet[tweet.parentId].repliesCount! + 1
+                }
+            }
+            ioFuncs.sendTweetUpdate(tweet.parentId, updatedParentTweet)
         }
 
     } catch (err) {
@@ -246,6 +252,28 @@ export const getPaginatedFeed = async (req: RequestWithCustomProperties, res: Re
         }
 
         const userFeed = await tweetsFunc.getPaginatedUserFeed(userId, skip, take, firstRequestTime, getUsers, getParents) //{tweets: {...}, users?: {...}, parents?: {...}}
+        res.status(201).json({...userFeed, status: "ok"})
+    }
+    catch(err) {
+        console.log(err)
+        res.status(500).json({error: err.message, status: "error"})
+    }
+}
+
+export const getPaginatedFeedUpdate = async (req: RequestWithCustomProperties, res: Response) => {
+    try{
+        const userId = req.userId as string
+
+        const take = parseInt(req.query.take)
+        const getUsers = req.query.getUsers === 'true' ? true : false
+        const firstRequestTime = parseInt(req.query.time)
+        console.log(take, firstRequestTime)
+
+        if (isNaN(take) || isNaN(firstRequestTime) || take === undefined || firstRequestTime === undefined) {
+            throw new Error('missing pagination parameters')
+        }
+
+        const userFeed = await tweetsFunc.getPaginatedFeedUpdate(userId, take, firstRequestTime, getUsers) //{tweets: {...}, users?: {...}, parents?: {...}}
         res.status(201).json({...userFeed, status: "ok"})
     }
     catch(err) {
