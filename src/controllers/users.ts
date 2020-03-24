@@ -12,6 +12,7 @@ import * as users from '../utils/users'
 import { DefaultProfileImage } from "../entity/DefaultProfileImage"
 import sharp from 'sharp'
 import {omit} from 'lodash'
+// import {IoFuncInterface} from '../models/ioFuncs'
 
 export const getUserProfile = async (req: RequestWithCustomProperties, res: Response) => {
     try {

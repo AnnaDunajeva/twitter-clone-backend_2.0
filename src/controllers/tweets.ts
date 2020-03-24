@@ -61,9 +61,9 @@ export const saveLikeToggle = async (req: RequestWithCustomProperties, res: Resp
         //tweet contains data related to user that modifies it, cant just broadcast this tweet like that to everybody who subscribed to it
         //maybe i should not even manipulate with this tweet that has other user info, but make another func to get tweet that i can broadcast to many users
                 // ioFuncs.sendTweetUpdate(tweetId, tweet)
-        ioFuncs.sendTweetUpdate(tweetId, {[tweetId]: pick(tweet[tweetId], ['id', 'likesCount'])})
         
         res.status(201).json({message: "success", status: "ok", tweet: {...tweet}})
+        ioFuncs.sendTweetUpdate(tweetId, {[tweetId]: pick(tweet[tweetId], ['id', 'likesCount'])})
     }
     catch (err) {
         res.status(400).json({error: err.message, status: "error"})
@@ -113,6 +113,13 @@ export const saveTweet = async (req: RequestWithCustomProperties, res: Response,
 
         console.log(tweetFromDB)
 
+        res.status(201).json({
+            tweet: {
+                [tweetFromDB.tweetId]: formatTweet(tweetFromDB, userId)
+            },
+            status: "ok"
+        })
+
         if (tweet.parentId) {
             const parentAuthorData = await tweetsFunc.getTweetsAuthorDataSmall([tweetFromDB.parentId!])
             tweetFromDB.parentAuthorData = parentAuthorData[tweetFromDB.parentId!]
@@ -120,13 +127,6 @@ export const saveTweet = async (req: RequestWithCustomProperties, res: Response,
             // ioFuncs.sendTweetUpdate(tweet.parentId, parentTweet)
             ioFuncs.sendTweetUpdate(tweet.parentId, {[tweet.parentId]: pick(parentTweet[tweet.parentId], ['id', 'repliesCount'])})
         }
-
-        res.status(201).json({
-            tweet: {
-                [tweetFromDB.tweetId]: formatTweet(tweetFromDB, userId)
-            },
-            status: "ok"
-        })
 
     } catch (err) {
         res.status(400).json({error: err.message, status: "error"})
@@ -380,16 +380,15 @@ export const deleteTweet = async (req: RequestWithCustomProperties, res: Respons
             throw new Error('Tweet already deleted.')
         }
         await tweetsFunc.deleteTweet(userId, tweetId)
+
+        res.status(201).json({message: 'success', status: "ok"})
+        
         const deletedFormatedTweet = await tweetsFunc.getTweetsbyId(userId, [tweetId])
-
         const parentTweet = tweetToDelete[tweetId].replyingToTweetId ? await tweetsFunc.getTweetsbyId(userId, [tweetToDelete[tweetId].replyingToTweetId as number]) : null //what if parent tweet was deleted?
-
         if (parentTweet) {
             ioFuncs.sendTweetUpdate(tweetToDelete[tweetId].replyingToTweetId as number, parentTweet)
         }
         ioFuncs.sendTweetUpdate(tweetId, deletedFormatedTweet)
-
-        res.status(201).json({message: 'success', status: "ok"})
     }
     catch (err) {
         console.log(err)

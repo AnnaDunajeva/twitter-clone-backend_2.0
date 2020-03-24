@@ -3,14 +3,14 @@
 
 export interface FormatedUser {
     userId: string;
-    firstName: string;
-    lastName: string;
-    createdAt: number;
-    avatar: string;
-    backgroundColor: string | null;
-    backgroundImage: string | null;
-    description: string | null;
-    location: string | null;
+    firstName?: string;
+    lastName?: string;
+    createdAt?: number;
+    avatar?: string;
+    backgroundColor?: string | null;
+    backgroundImage?: string | null;
+    description?: string | null;
+    location?: string | null;
     following?: boolean; //only for nonAuthed
     email?: string; //only for authedUser
     followingsCount?: number;

@@ -9,6 +9,7 @@ import {addFollowing, getFollowings, deleteFollowing, getFollowers} from '../con
 import { RequestWithCustomProperties } from '../models/request'
 import { TweetsInterface } from '../models/tweets'
 import {IoFuncInterface} from '../models/ioFuncs'
+import { UsersInterface } from '../models/users'
 
 const router = Router()
 
@@ -34,8 +35,12 @@ export const createRouter = (io: SocketIO.Server) => {
         // console.log('about to send tweet update ', tweetId)
         io.to(tweetId.toString()).emit('tweet_update', {tweetId, tweet})
     }
+    const sendUserUpdate = (userId: string, user: UsersInterface) => {
+        io.to(userId).emit('user_update', {userId, user})
+    }
     const ioFuncs: IoFuncInterface = {
-        sendTweetUpdate
+        sendTweetUpdate,
+        sendUserUpdate
     }
 
     //router.get('/test', authentication, getUserTweetsPaginated)
@@ -75,8 +80,8 @@ export const createRouter = (io: SocketIO.Server) => {
     router.get('/user/followings', authentication, getFollowings)
     router.get('/user/followers', authentication, getFollowers)
    
-    router.post('/user/followings/:userId', authentication, addFollowing)
-    router.delete('/user/followings/:userId', authentication, deleteFollowing)
+    router.post('/user/followings/:userId', authentication, (req, res) => addFollowing(req, res, ioFuncs))
+    router.delete('/user/followings/:userId', authentication, (req, res) => deleteFollowing(req, res, ioFuncs))
 
     router.post('/user/login', login)
     //maybe i dont need authentication to logOut?
