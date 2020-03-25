@@ -3,4 +3,5 @@ import { UsersInterface } from './users';
 export interface IoFuncInterface {
     sendTweetUpdate: (tweetId: number, tweet: TweetsInterface) => void;
     sendUserUpdate: (userId: string, user: UsersInterface)=> void;
+    unsubscribeFromTweet: (tweetId: number) => void;
 }

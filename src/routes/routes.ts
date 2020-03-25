@@ -38,9 +38,19 @@ export const createRouter = (io: SocketIO.Server) => {
     const sendUserUpdate = (userId: string, user: UsersInterface) => {
         io.to(userId).emit('user_update', {userId, user})
     }
+    const unsubscribeFromTweet = (tweetId: number) => {
+        console.log('about to unsubscribe all sockets from deleted tweet')
+        io.in(tweetId.toString()).clients((error: Error, socketIds: any[]) => {
+            if (error) {console.log(error);}
+            else {socketIds.forEach(socketId => io.sockets.connected[socketId].leave(tweetId.toString()));}
+          });
+          
+        io.to(tweetId.toString())
+    }
     const ioFuncs: IoFuncInterface = {
         sendTweetUpdate,
-        sendUserUpdate
+        sendUserUpdate,
+        unsubscribeFromTweet
     }
 
     //router.get('/test', authentication, getUserTweetsPaginated)

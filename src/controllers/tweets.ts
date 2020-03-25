@@ -412,11 +412,15 @@ export const deleteTweet = async (req: RequestWithCustomProperties, res: Respons
         res.status(201).json({message: 'success', status: "ok"})
         
         const deletedFormatedTweet = await tweetsFunc.getTweetsbyId(userId, [tweetId])
-        const parentTweet = tweetToDelete[tweetId].replyingToTweetId ? await tweetsFunc.getTweetsbyId(userId, [tweetToDelete[tweetId].replyingToTweetId as number]) : null //what if parent tweet was deleted?
-        if (parentTweet) {
-            ioFuncs.sendTweetUpdate(tweetToDelete[tweetId].replyingToTweetId as number, parentTweet)
+        const parentTweetId = tweetToDelete[tweetId].replyingToTweetId 
+        const parentTweet = parentTweetId ? await tweetsFunc.getTweetsbyIdWithoutDeleted(userId, [parentTweetId as number]) : null //what if parent tweet was deleted?
+        const parentDataToUpdate = parentTweet && parentTweet[parentTweetId!] ? pick(parentTweet[parentTweetId!], ['id', 'repliesCount']) : null
+        if (parentDataToUpdate) {
+            ioFuncs.sendTweetUpdate(parentTweetId as number, {[parentTweetId!]: parentDataToUpdate})
         }
         ioFuncs.sendTweetUpdate(tweetId, deletedFormatedTweet)
+        ioFuncs.unsubscribeFromTweet(tweetId)
+        //what to do if this deleted tweet had replies?
     }
     catch (err) {
         console.log(err)
