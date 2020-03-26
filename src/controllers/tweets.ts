@@ -408,8 +408,6 @@ export const deleteTweet = async (req: RequestWithCustomProperties, res: Respons
             throw new Error('Tweet already deleted.')
         }
         await tweetsFunc.deleteTweet(userId, tweetId)
-
-        res.status(201).json({message: 'success', status: "ok"})
         
         const deletedFormatedTweet = await tweetsFunc.getTweetsbyId(userId, [tweetId])
         const parentTweetId = tweetToDelete[tweetId].replyingToTweetId 
@@ -419,6 +417,9 @@ export const deleteTweet = async (req: RequestWithCustomProperties, res: Respons
             ioFuncs.sendTweetUpdate(parentTweetId as number, {[parentTweetId!]: parentDataToUpdate})
         }
         ioFuncs.sendTweetUpdate(tweetId, deletedFormatedTweet)
+
+        res.status(201).json({message: 'success', status: "ok"})
+
         ioFuncs.unsubscribeFromTweet(tweetId)
         //what to do if this deleted tweet had replies?
     }
