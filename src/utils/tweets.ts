@@ -463,6 +463,44 @@ export const getConversationPaginated = async (userId: string, skip: number, tak
     return response
 }
 
+export const getConversationUpdate = async (userId: string, take: number, time: number, parentId: number, getUsers: boolean) => {
+    const tweetsRepo = getRepository(Tweets) 
+
+    const replies = await tweetsRepo
+    .createQueryBuilder('tweets')
+    .leftJoin("tweets.likes", "likes", "likes.deletedAt is null")
+    .leftJoin("tweets.replies", "replies", "replies.deletedAt is null")
+    .where("tweets.parentId = :parentId", {parentId})
+    .andWhere('tweets.deletedAt is null')
+    .andWhere(`tweets.createdAt > to_timestamp(${time/1000})`)
+    .select(['tweets', 'likes.userId', 'replies.tweetId'])
+    .orderBy("tweets.createdAt", "ASC")
+    .take(take)
+    .getMany()
+
+    const parentAuthorData = await getTweetsAuthorDataSmall([parentId])
+
+    const tweetsWithParentAuthorData = replies.map(tweet => ({
+        ...tweet,
+        sortindex: Date.parse(tweet.createdAt),
+        media: tweet.media ? true : false,
+        type: 'reply',
+        parentAuthorData: parentAuthorData[parentId]
+    }))
+
+    const formatedTweets = formatTweetsFromDB(tweetsWithParentAuthorData, userId)
+
+    const response: TweetsResponse = {tweets: {...formatedTweets}, users: {}}
+
+    if (getUsers) {
+        const userIds = uniq(replies.map(tweet => tweet.userId))
+        const users = await usersFunctions.getUsersByIds(userId, userIds)
+        response.users = users
+    }
+    console.log('replies response ', response)
+    return response
+}
+
 export const getUserTweetImagesPaginates = async (userId: string, skip: number, take: number, firstRequestTime: number, user: string, getUsers: boolean, getParents: boolean) => {
     const tweetsRepo = getRepository(Tweets) 
     

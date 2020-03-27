@@ -330,6 +330,27 @@ export const getConversationPaginated = async (req: RequestWithCustomProperties,
     }
 }
 
+export const getConversationUpdate = async (req: RequestWithCustomProperties, res: Response) => {
+    try{
+        const userId = req.userId as string
+        const parentId = parseInt(req.params.tweetId)
+        const getUsers = req.query.getUsers === 'true' ? true : false
+
+        const take = parseInt(req.query.take)
+        const time = parseInt(req.query.time)
+
+        if (isNaN(take) || isNaN(time) || take === undefined || time === undefined) {
+            throw new Error('missing pagination parameters')
+        }
+
+        const response = await tweetsFunc.getConversationUpdate(userId, take, time, parentId, getUsers)
+        res.status(201).json({...response, status: "ok"})
+    }
+    catch(err) {
+        res.status(500).json({error: err.message, status: "error"})
+    }
+}
+
 export const getUserTweetImagesPaginates = async (req: RequestWithCustomProperties, res: Response) => {
     try{
         console.log('inside getUserTweetImagesPaginates')

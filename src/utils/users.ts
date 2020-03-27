@@ -80,40 +80,45 @@ export const getAllUserIds = async () => {
 // }
 
 export const getUsersByIds = async (authedUser: string, ids: string[]) => {
+    // const ids = receivedIds.filter(id => id !== authedUser)
     const usersRepo = getRepository(Users)
     console.log(ids)
+    const idsWithoutAuthedUser = ids.filter(id => id !== authedUser)
     if (ids.length !== 0) {
-        const users  = await usersRepo
-        .createQueryBuilder("users")
-        .leftJoin("users.followings", "followings")
-        .where("users.userId IN (:...ids)", { ids: ids })
-        .select(['followings.followingId', 'users.userId','users.firstName', 'users.lastName','users.createdAt', 'users.avatar', 'users.backgroundColor', 'users.backgroundImage','users.description', 'users.location']) 
-        .getMany()
-
-        if(users.length === 0) {
-            return {}
-        }
-
         const formatedUsers: UsersInterface = {};
-
-        for (let userFromDB of users) {
-            const user = {
-                 ...userFromDB, 
-                 avatar: userFromDB.avatar ? true : false,
-                 backgroundImage: userFromDB.backgroundImage ? true : false
-            } as ExtendedUser
-            const followersIds: string[] = await getFollowersIds(userFromDB.userId)
-    
-            user.followersCount = followersIds.length
-            user.followingsCount = userFromDB.followings.length
-            user.sortindex = Date.parse(userFromDB.createdAt)
-            if (user.userId !== authedUser) {
-                user.following = followersIds.includes(authedUser)
+        if (ids.includes(authedUser)) {
+            const authedUserProfile = await getUserProfile(authedUser)
+            formatedUsers[authedUser] = authedUserProfile[authedUser]
+        } 
+        if (idsWithoutAuthedUser.length !== 0) {
+            const users  = await usersRepo
+            .createQueryBuilder("users")
+            .leftJoin("users.followings", "followings")
+            .where("users.userId IN (:...ids)", { ids: idsWithoutAuthedUser})
+            .select(['followings.followingId', 'users.userId','users.firstName', 'users.lastName','users.createdAt', 'users.avatar', 'users.backgroundColor', 'users.backgroundImage','users.description', 'users.location']) 
+            .getMany()
+            if (users.length === 0) {
+                return formatedUsers //will contain authed user if it was requested
             }
-    
-            formatedUsers[userFromDB.userId] = formatUser(user)
+            for (let userFromDB of users) {
+                const user = {
+                     ...userFromDB, 
+                     avatar: userFromDB.avatar ? true : false,
+                     backgroundImage: userFromDB.backgroundImage ? true : false
+                } as ExtendedUser
+                const followersIds: string[] = await getFollowersIds(userFromDB.userId)
+        
+                user.followersCount = followersIds.length
+                user.followingsCount = userFromDB.followings.length
+                user.sortindex = Date.parse(userFromDB.createdAt)
+                if (user.userId !== authedUser) {
+                    user.following = followersIds.includes(authedUser)
+                }
+        
+                formatedUsers[userFromDB.userId] = formatUser(user)
+            }
+            return formatedUsers
         }
-        return formatedUsers
     }
     return {}
 }
