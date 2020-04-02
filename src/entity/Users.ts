@@ -23,6 +23,9 @@ export class Users {
     @Column()
     email!: string;
 
+    @Column({nullable: true, type: 'timestamp with time zone'})
+    verifiedAt!: string | null;
+
     @Column('timestamp with time zone')
     createdAt!: string;
 

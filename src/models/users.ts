@@ -48,6 +48,7 @@ export interface UpdateUserData {
     description?: string;
     location?: string;
     email?: string;
+    verifiedAt?: () => string;
 }
 
 export interface smallAuthor {

@@ -3,7 +3,8 @@ import {TweetsInterface, ExtendedTweet, FormatedTweet} from '../models/tweets' /
 // import {Tweets} from '../entity/Tweets'
 //import {smallTweetAuthor} from '../models/tweets'
 import {v4 as uuidv4} from 'uuid';
-
+import sgMail from '@sendgrid/mail'
+// const sgMail = require('@sendgrid/mail')
 const URL = 'http://localhost:3001'
 
 export const formatUser = (user: ExtendedUser) => {
@@ -90,3 +91,32 @@ export const formatTweetsFromDB = (tweets: ExtendedTweet[], userId: string) => {
   })
   return formatedTweets
 }
+
+sgMail.setApiKey(process.env.SENDGRID_API_KEY as string);
+export const sendEmailConfirmation = async(to: string, token: string, url: string) => {
+    // sgMail.setApiKey(process.env.SENDGRID_API_KEY as string);
+    const link=url+'/'+token
+    const msg = {
+        to,
+        from: process.env.SENDGRID_FROM_EMAIL as string,
+        subject: 'Thank you for regestering with Twitter-clone!',
+        html: `<p>Please confirm your email adress by clicking on the following <a href="${link}">link</a>.</p><p>If you did not request this, please ignore this email.</p> <p>Please do not reply to this email.</p>`
+    };
+    try {
+        console.log('about to send email confirmation')
+        await sgMail.send(msg);
+    }
+    catch (err) {
+        console.error(err.toString());
+    }
+}
+
+//! # $ % & ‘ * + – / = ? ^ ` . { | } ~ characters are legal in the local part of an e-mail 
+//address but in this regular expression those characters are filtered out. 
+export const validateEmail = (email: string) => {
+    if (/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,4})+$/.test(email)) {
+      return (true)
+    }
+    return (false)
+  }
+

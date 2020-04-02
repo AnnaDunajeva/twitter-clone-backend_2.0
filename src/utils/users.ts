@@ -12,7 +12,39 @@ export const getUserProfile = async (userId: string) => {
     .createQueryBuilder("users")
     .leftJoin("users.followings", "followings")
     .where("users.userId =:id", { id: userId })
+    .andWhere("users.verifiedAt is not null")
     .select(['followings.followingId', 'users.userId','users.firstName', 'users.lastName','users.createdAt', 'users.avatar', 'users.backgroundColor', 'users.backgroundImage','users.email', 'users.description', 'users.location']) 
+    // .addSelect('extract(epoch from users.createdAt)', 'createdAt') //in sec, ??is it number or string?
+    //.addSelect('COUNT(followings.followingId)', 'followingsCount') //weird error, dont know how to solve
+    .getOne()
+    console.log(userFromDB)
+
+    if(!userFromDB) {
+        return {}
+    }
+    
+    const user = {
+        ...userFromDB,
+        followingsCount: userFromDB.followings.length,
+        avatar: userFromDB.avatar ? true : false,
+        backgroundImage: userFromDB.backgroundImage ? true : false
+    } as ExtendedUser
+
+    const followersIds: string[] = await getFollowersIds(userId)
+    user.followersCount = followersIds.length
+    
+    const formatedUser: FormatedUser = formatUser(user)
+    
+    return {[user.userId]: formatedUser}
+}
+
+export const getUnverifiedUserProfile = async (userId: string) => {
+    const usersRepo = getRepository(Users)
+    const userFromDB = await usersRepo
+    .createQueryBuilder("users")
+    .leftJoin("users.followings", "followings")
+    .where("users.userId =:id", { id: userId })
+    .select(['followings.followingId', 'users.userId','users.firstName', 'users.lastName','users.createdAt', 'users.avatar', 'users.backgroundColor', 'users.backgroundImage','users.email', 'users.description', 'users.location', 'users.verifiedAt']) 
     // .addSelect('extract(epoch from users.createdAt)', 'createdAt') //in sec, ??is it number or string?
     //.addSelect('COUNT(followings.followingId)', 'followingsCount') //weird error, dont know how to solve
     .getOne()
@@ -95,6 +127,7 @@ export const getUsersByIds = async (authedUser: string, ids: string[]) => {
             .createQueryBuilder("users")
             .leftJoin("users.followings", "followings")
             .where("users.userId IN (:...ids)", { ids: idsWithoutAuthedUser})
+            .andWhere("users.verifiedAt is not null")
             .select(['followings.followingId', 'users.userId','users.firstName', 'users.lastName','users.createdAt', 'users.avatar', 'users.backgroundColor', 'users.backgroundImage','users.description', 'users.location']) 
             .getMany()
             if (users.length === 0) {
@@ -151,6 +184,7 @@ export const getAllUsersPaginated = async (authedUser: string, skip: number, tak
     .select(['followings.followingId', 'users.userId','users.firstName', 'users.lastName','users.createdAt', 'users.avatar', 'users.backgroundColor', 'users.backgroundImage','users.description', 'users.location']) 
     .where("users.userId <> :id", { id: authedUser })
     .andWhere(`users.createdAt < to_timestamp(${firstRequestTime/1000})`) //doesnt work
+    .andWhere("users.verifiedAt is not null")
     .take(take)
     .skip(skip)
     .getMany()

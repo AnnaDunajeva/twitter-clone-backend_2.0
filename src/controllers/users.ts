@@ -6,12 +6,15 @@ import {RequestWithCustomProperties} from '../models/request'
 //import {UpdateUserData} from '../models/users'
 import bcrypt from 'bcrypt'
 // import {formatUser} from '../utils/helpers'
-import * as tokens from '../utils/tokens'
-import * as auth from '../utils/authentication'
+// import * as tokens from '../utils/tokens'
+// import * as auth from '../utils/authentication'
 import * as users from '../utils/users'
+import * as auth from '../utils/authentication'
 import { DefaultProfileImage } from "../entity/DefaultProfileImage"
 import sharp from 'sharp'
 import {omit} from 'lodash'
+import {sendEmailConfirmation} from '../utils/helpers'
+import {validateEmail} from '../utils/helpers'
 // import {IoFuncInterface} from '../models/ioFuncs'
 
 export const getUserProfile = async (req: RequestWithCustomProperties, res: Response) => {
@@ -122,45 +125,66 @@ export const getUserBackground = async (req: RequestWithCustomProperties, res: R
 export const addUser: RequestHandler = async (req, res) => {
     try {
         const usersRepo = getRepository(Users)
-        const {userId, firstName, lastName, password, email} = req.body as {userId: string, firstName: string, lastName: string, avatarURL: string, password: string, backgroundURL: string | null | undefined, description: string | null | undefined, location: string | null | undefined, email: string}
+        const {userId, firstName, lastName, password, email} = req.body as {userId: string, firstName: string, lastName: string,  password: string, email: string}
         // const problem = await usersRepo.findOne(undefined)
         // console.log(problem)
         if (!(userId && firstName && lastName && email && password)) {
             throw new Error('All fields must be filled!')
         }
-        if (await usersRepo.findOne({userId})) { //if i use select options, then if userId is undefined, it wont return first value in column but returns undefined
+        const userInDb = await usersRepo.findOne({userId})//if i use select options, then if userId is undefined, it wont return first value in column but returns undefined
+        //this is unreliable, should rexrite it probably
+
+        //? chekck token, if expired delete account if it was created more that 24h ago? 
+        //then allow to register with this username again?
+        let userDeleted = false
+        if (userInDb && !userInDb.verifiedAt) {
+            userDeleted = await auth.checkAndDeleteExpiredUnverifiedAccount(userInDb)
+        }
+
+        if (userInDb && !userDeleted) { 
             throw new Error('Username already exists!')
         }
 
+        // if (await usersRepo.findOne({email})) { //if i use select options, then if userId is undefined, it wont return first value in column but returns undefined
+        //                                         //this is unreliable, should rexrite it probably
+        //     throw new Error('Email already taken!')
+        // }
+        if (!validateEmail(email)) {
+            throw new Error('Provided email adress is invalid!')
+        }
+        
         const user = { 
             userId: userId.toLowerCase(),
             firstName: firstName, 
             lastName: lastName,
-            avatar: null,
+            email: email,
+            password: await bcrypt.hash(password.toString(), 8), //8 should be changed to 12!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            createdAt: () => `to_timestamp(${Date.now()/1000})`, //postgres func to_timestamp accepts unix time in sec
+            avatar: null, //can remove all these nulls really
             backgroundImage: null,
             backgroundColor: null,
             description: null,
             location: null,
-            email: email,
-            password: await bcrypt.hash(password.toString(), 8),
-            createdAt: () => `to_timestamp(${Date.now()/1000})` //postgres func to_timestamp accepts unix time in sec
+            verifiedAt: null
         }
-
         await usersRepo
                 .createQueryBuilder('users')
                 .insert()
                 .values(user)
                 .execute();
-
-        const token = auth.generateAuthToken(user.userId)
-        await tokens.saveToken(user.userId, token)
         
-        const userProfile = await users.getUserProfile(userId)
-        res.status(201).json({ user: userProfile, token, status: "ok"})
+        const verificationToken = await auth.generateEmailVerificationToken(user.userId)
 
-        // const formatedUser: FormatedUser = formatUser(userId, firstName, lastName, avatarURL, [], [], [])
-    
-        // res.json({ user: {[userId]:formatedUser}, token})
+        await sendEmailConfirmation(email, verificationToken, 'http://localhost:3000/verify') //dunno how to get it from req
+
+        // const userProfile = await users.getUserProfile(userId)
+        res.status(201).json({ status: "ok"})
+
+        // const token = auth.generateAuthToken(user.userId)
+        // await tokens.saveToken(user.userId, token)
+        
+        // const userProfile = await users.getUserProfile(userId)
+        // res.status(201).json({ user: userProfile, token, status: "ok"})
     } catch (err) {
         console.log(err)
         res.status(400).json({error: err.message, status: "error"}) //how to send error properly? Do i need to serialize error object somehow?
