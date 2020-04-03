@@ -6,7 +6,6 @@ import * as users from '../utils/users'
 import {IoFuncInterface} from '../models/ioFuncs'
 import {pick} from 'lodash'
 
-//needs also paginated paginated
 export const getFollowings = async (req: RequestWithCustomProperties, res: Response) => {
     try {
         const userId = req.userId as string
@@ -16,6 +15,52 @@ export const getFollowings = async (req: RequestWithCustomProperties, res: Respo
         res.status(201).json({ users: followingsFormated, status: "ok" })
     } catch (err) {
         res.status(400).json({error: err, status: "error"})
+    }
+}
+
+export const getUserFollowingsPaginated = async (req: RequestWithCustomProperties, res: Response) => {
+    try{
+        const userId = req.userId as string
+        const take = parseInt(req.query.take)
+        const skip = parseInt(req.query.skip)
+        const firstRequestTime = parseInt(req.query.time)
+        const userToGet = req.params.userId
+
+        if (isNaN(take) || isNaN(skip) || isNaN(firstRequestTime) || take === undefined || skip === undefined || firstRequestTime === undefined) {
+            throw new Error('missing pagination parameters')
+        }
+
+        const userFollowings = await users.getUserFollowingsPaginated(userId, userToGet, skip, take, firstRequestTime)
+
+        res.status(201).json({ users: userFollowings, status: "ok" })
+    }
+    catch (err) {
+        console.log(err)
+        res.status(400).json({error: err.message, status: "error"})
+    }
+}
+
+export const getUserFollowersPaginated = async (req: RequestWithCustomProperties, res: Response) => {
+    try{
+        console.log('inside getUserFollowersPaginated')
+        const userId = req.userId as string
+        const take = parseInt(req.query.take)
+        const skip = parseInt(req.query.skip)
+        const firstRequestTime = parseInt(req.query.time)
+        const userToGet = req.params.userId
+        console.log(take, skip, firstRequestTime, userToGet)
+
+        if (isNaN(take) || isNaN(skip) || isNaN(firstRequestTime) || take === undefined || skip === undefined || firstRequestTime === undefined) {
+            throw new Error('missing pagination parameters')
+        }
+
+        const userFollowers = await users.getUserFollowersPaginated(userId, userToGet, skip, take, firstRequestTime)
+
+        res.status(201).json({ users: userFollowers, status: "ok" })
+    }
+    catch (err) {
+        console.log(err)
+        res.status(400).json({error: err.message, status: "error"})
     }
 }
 

@@ -5,7 +5,7 @@ import {getPaginatedFeed, getPaginatedFeedUpdate, saveTweet, getConversationPagi
 import {addUser, getUserProfile, getAllUsersPaginated, updateUser, getUser, getUserAvatar, getUserBackground, getUserAvatarDefault, deleteAvatar, deleteBackground} from '../controllers/users' //getUser, getAllUsers, updateUser, getUsersByIds, getUserTweetsPaginated, getRepliesPaginated
 import {login, logout, logoutAll, verifyUserEmail} from '../controllers/authentication'
 import {authentication} from '../middleware/authentication'
-import {addFollowing, getFollowings, deleteFollowing, getFollowers} from '../controllers/followings'
+import {addFollowing, getUserFollowersPaginated, deleteFollowing, getUserFollowingsPaginated} from '../controllers/followings'
 import { RequestWithCustomProperties } from '../models/request'
 import { TweetsInterface } from '../models/tweets'
 import {IoFuncInterface} from '../models/ioFuncs'
@@ -91,8 +91,8 @@ export const createRouter = (io: SocketIO.Server) => {
     // router.delete('/user/tweet/:tweetId')
     router.post('/user/tweets/like/:tweetId', authentication, (req, res)=>saveLikeToggle(req, res, ioFuncs))
 
-    router.get('/user/followings', authentication, getFollowings)
-    router.get('/user/followers', authentication, getFollowers)
+    router.get('/user/:userId/followings', authentication, getUserFollowingsPaginated)
+    router.get('/user/:userId/followers', authentication, getUserFollowersPaginated)
    
     router.post('/user/followings/:userId', authentication, (req, res) => addFollowing(req, res, ioFuncs))
     router.delete('/user/followings/:userId', authentication, (req, res) => deleteFollowing(req, res, ioFuncs))

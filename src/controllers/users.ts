@@ -176,7 +176,8 @@ export const addUser: RequestHandler = async (req, res) => {
         const verificationToken = await auth.generateEmailVerificationToken(user.userId)
 
         await sendEmailConfirmation(email, verificationToken, 'http://localhost:3000/verify') //dunno how to get it from req
-
+        //I think in case of email error no need really to delete user from db here as it will be eligible for delete after 24h anyway if not verified    
+    
         // const userProfile = await users.getUserProfile(userId)
         res.status(201).json({ status: "ok"})
 
@@ -329,8 +330,8 @@ export const getAllUsersPaginated = async (req: RequestWithCustomProperties, res
         const skip = parseInt(req.query.skip)
         const firstRequestTime = parseInt(req.query.time)
 
-        if (!take && !skip && !firstRequestTime) {
-            throw new Error('Wrong query!')
+        if (isNaN(take) || isNaN(skip) || isNaN(firstRequestTime) || take === undefined || skip === undefined || firstRequestTime === undefined) {
+            throw new Error('missing pagination parameters')
         }
 
         const userProfiles = await users.getAllUsersPaginated(userId, skip, take, firstRequestTime)

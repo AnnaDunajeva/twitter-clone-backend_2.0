@@ -413,7 +413,11 @@ export const getConversationPaginated = async (userId: string, skip: number, tak
         }
     }
     mainTweet[parentId].type = 'main tweet'
-    const mainTweetAuthor = mainTweet[parentId].deleted ? undefined : await usersFunctions.getUsersByIds(userId, [mainTweet[parentId].user as string])
+
+    const parentUserId = mainTweet[parentId].user as string
+    const mainTweetAuthor = mainTweet[parentId].deleted ? undefined : await usersFunctions.getUsersByIds(userId, [parentUserId])
+    console.log('main tweet author: ', mainTweetAuthor)
+
 
     if (!mainTweet.deleted && mainTweet[parentId].repliesCount === 0) {
         return {
@@ -442,8 +446,8 @@ export const getConversationPaginated = async (userId: string, skip: number, tak
         media: tweet.media ? true : false,
         parentAuthorData: !mainTweetAuthor ? undefined : {
             tweetId: parentId,
-            name: `${mainTweetAuthor[mainTweet[parentId].user as string].firstName } ${mainTweetAuthor[mainTweet[parentId].user as string].lastName}`,
-            userId: mainTweetAuthor[mainTweet[parentId].user as string].userId
+            name: `${mainTweetAuthor[parentUserId].firstName } ${mainTweetAuthor[parentUserId].lastName}`,
+            userId: mainTweetAuthor[parentUserId].userId
         }
     }))
     const formatedTweets = formatTweetsFromDB(tweetsWithParentAuthorData, userId)
@@ -593,7 +597,7 @@ export const getUserTweetLikesPaginates = async (userId: string, skip: number, t
     const response: TweetsResponse = {tweets: likedTweetsWithSortindex, users: {}}
 
     if (getUsers) {
-        const userIds = uniq(likedTweetIdsWithoutDeleted.map(tweetId => likedTweets[tweetId].user as string))
+        const userIds = uniq(likedTweetIdsWithoutDeleted.map(tweetId => likedTweets[tweetId].user)) as string[]
         const users = await usersFunctions.getUsersByIds(userId, userIds)
         response.users = users
     }

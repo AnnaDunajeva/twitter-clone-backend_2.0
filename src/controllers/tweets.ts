@@ -54,7 +54,8 @@ export const saveLikeToggle = async (req: RequestWithCustomProperties, res: Resp
         } 
 
         tweet[tweetId].liked = !tweet[tweetId].liked
-        tweet[tweetId].likesCount = tweet[tweetId].liked ? tweet[tweetId].likesCount as number + 1 : tweet[tweetId].likesCount as number - 1
+        const oldLikesCount = tweet[tweetId].likesCount as number
+        tweet[tweetId].likesCount = tweet[tweetId].liked ? oldLikesCount + 1 : oldLikesCount - 1
 
         //cant do that because liked is for user who liked, so all tweets who are subscribed thinkthey liked not somebody else. Same with replies
         //tweet contains data related to user that modifies it, cant just broadcast this tweet like that to everybody who subscribed to it
@@ -326,6 +327,7 @@ export const getConversationPaginated = async (req: RequestWithCustomProperties,
         res.status(201).json({...response, status: "ok"})
     }
     catch(err) {
+        console.log(err)
         res.status(500).json({error: err.message, status: "error"})
     }
 }
@@ -431,12 +433,17 @@ export const deleteTweet = async (req: RequestWithCustomProperties, res: Respons
         await tweetsFunc.deleteTweet(userId, tweetId)
         
         const deletedFormatedTweet = await tweetsFunc.getTweetsbyId(userId, [tweetId])
+
         const parentTweetId = tweetToDelete[tweetId].replyingToTweetId 
-        const parentTweet = parentTweetId ? await tweetsFunc.getTweetsbyIdWithoutDeleted(userId, [parentTweetId as number]) : null //what if parent tweet was deleted?
-        const parentDataToUpdate = parentTweet && parentTweet[parentTweetId!] ? pick(parentTweet[parentTweetId!], ['id', 'repliesCount']) : null
-        if (parentDataToUpdate) {
-            ioFuncs.sendTweetUpdate(parentTweetId as number, {[parentTweetId!]: parentDataToUpdate})
+        if (parentTweetId) {
+            const parentTweet = await tweetsFunc.getTweetsbyIdWithoutDeleted(userId, [parentTweetId])
+            if (Object.keys(parentTweet).length !== 0) {//parent tweet might have been deleted
+                const parentDataToUpdate = pick(parentTweet[parentTweetId], ['id', 'repliesCount'])
+                console.log('updating parent tweet after child delete: ', parentDataToUpdate)
+                ioFuncs.sendTweetUpdate(parentTweetId, {[parentTweetId]: parentDataToUpdate})
+            }
         }
+
         ioFuncs.sendTweetUpdate(tweetId, deletedFormatedTweet)
 
         res.status(201).json({message: 'success', status: "ok"})

@@ -62,7 +62,6 @@ export const checkAndDeleteExpiredUnverifiedAccount = async (user: Users) => {
   const verificationTokensRepo = getRepository(VerificationTokens)
   const usersRepo = getRepository(Users)
   
-  const userCreatedAt = new Date(user.createdAt as string)
   const verificationTokenData = await verificationTokensRepo.findOne({userId: user.userId}) //?can be undefined
   const tokenCreatedAt = verificationTokenData ? new Date(verificationTokenData.createdAt) : null
   const isTokenValid = tokenCreatedAt 
@@ -70,20 +69,24 @@ export const checkAndDeleteExpiredUnverifiedAccount = async (user: Users) => {
                               ?false
                               :true
                           : false
-
-  if (time - userCreatedAt.getTime() > 86400000 && !isTokenValid) {
-    console.log('about to delete verification token and user account')
+  if (!isTokenValid) {
+    console.log('about to delete expired verification token')
       await verificationTokensRepo
       .createQueryBuilder('verificationTokens')
       .delete()
       .where("userId = :id", { id: user.userId })
       .execute();
+  }
+  
+  const userCreatedAt = new Date(user.createdAt as string)
+  if (time - userCreatedAt.getTime() > 86400000) { //24h
+    console.log('about to delete verification token and user account')
       await usersRepo //maybe cascade?
       .createQueryBuilder('users')
       .delete()
       .where("userId = :id", { id: user.userId })
       .execute();
-
+      //return true to signify that user account was deleted. 
       return true
   }
   return false

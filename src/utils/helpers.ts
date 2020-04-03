@@ -108,6 +108,7 @@ export const sendEmailConfirmation = async(to: string, token: string, url: strin
     }
     catch (err) {
         console.error(err.toString());
+        throw new Error('Could not send verification email')
     }
 }
 

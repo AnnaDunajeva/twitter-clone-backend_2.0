@@ -90,6 +90,118 @@ export const getAllUserIds = async () => {
     return userIds
 }
 
+export const getUserFollowingsPaginated = async (authedUser: string, userId: string, skip: number, take: number, firstRequestTime: number) => {
+    const followingsIds = await getFollowingsIds(userId)
+    
+    if (followingsIds.length === 0) {
+        return {}
+    }
+
+    const usersRepo = getRepository(Users)
+    const users  = await usersRepo
+    .createQueryBuilder("users")
+    .leftJoin("users.followings", "followings")
+    .select(['followings.followingId', 'users.userId','users.firstName', 'users.lastName','users.createdAt', 'users.avatar', 'users.backgroundColor', 'users.backgroundImage','users.description', 'users.location']) 
+    .where("users.userId in (:...ids)", { ids: followingsIds })
+    .andWhere(`users.createdAt < to_timestamp(${firstRequestTime/1000})`)
+    .andWhere("users.verifiedAt is not null")
+    .take(take)
+    .skip(skip)
+    .getMany()
+
+    // const followingsRepo = getRepository(Followings)
+    // const users  = await followingsRepo
+    // .createQueryBuilder("followings")
+    // .leftJoin("users.followingId", "users")
+    // .select(['users.userId','users.firstName', 'users.lastName','users.createdAt', 'users.avatar', 'users.backgroundColor', 'users.backgroundImage','users.description', 'users.location']) 
+    // .where("followings.userId = :id", { id: userId })
+    // .andWhere(`users.createdAt < to_timestamp(${firstRequestTime/1000})`)
+    // .andWhere("users.verifiedAt is not null")
+    // .take(take)
+    // .skip(skip)
+    // .getMany() //user followers length need to be counted separetely...
+
+    if(users.length === 0) {
+        return {}
+    }
+
+    const formatedUsers: UsersInterface = {};
+
+    for (let userFromDB of users) {
+        if (userFromDB.userId === authedUser) {
+            const authedUserProfile = await getUserProfile(authedUser)
+            formatedUsers[authedUser] = authedUserProfile[authedUser]
+        } else {
+            const user = { 
+                ...userFromDB,
+                avatar: userFromDB.avatar ? true : false,
+                backgroundImage: userFromDB.backgroundImage ? true : false
+            } as ExtendedUser
+            const followersIds: string[] = await getFollowersIds(userFromDB.userId)
+            //const followingsIds = userFromDB.followings.map(following => following.followingId)
+    
+            user.followersCount = followersIds.length
+            user.followingsCount = userFromDB.followings.length
+            user.sortindex = Date.parse(userFromDB.createdAt)
+            user.following = followersIds.includes(authedUser)
+    
+            formatedUsers[userFromDB.userId] = formatUser(user)
+        }
+    }
+
+    //we need sortindex and following properties here (which for now is just createAt in unix)
+
+    return formatedUsers
+}
+
+export const getUserFollowersPaginated = async (authedUser: string, userId: string, skip: number, take: number, firstRequestTime: number) => {
+    const followersIds = await getFollowersIds(userId)
+    
+    if (followersIds.length === 0) {
+        return {}
+    }
+
+    const usersRepo = getRepository(Users)
+    const users  = await usersRepo
+    .createQueryBuilder("users")
+    .leftJoin("users.followings", "followings")
+    .select(['followings.followingId', 'users.userId','users.firstName', 'users.lastName','users.createdAt', 'users.avatar', 'users.backgroundColor', 'users.backgroundImage','users.description', 'users.location']) 
+    .where("users.userId in (:...ids)", { ids: followersIds })
+    .andWhere(`users.createdAt < to_timestamp(${firstRequestTime/1000})`)
+    .andWhere("users.verifiedAt is not null")
+    .take(take)
+    .skip(skip)
+    .getMany()
+
+    if(users.length === 0) {
+        return {}
+    }
+
+    const formatedUsers: UsersInterface = {};
+
+    for (let userFromDB of users) {
+        if (userFromDB.userId === authedUser) {
+            const authedUserProfile = await getUserProfile(authedUser)
+            formatedUsers[authedUser] = authedUserProfile[authedUser]
+        } else {
+            const user = { 
+                ...userFromDB,
+                avatar: userFromDB.avatar ? true : false,
+                backgroundImage: userFromDB.backgroundImage ? true : false
+            } as ExtendedUser
+            const followersIds: string[] = await getFollowersIds(userFromDB.userId)
+    
+            user.followersCount = followersIds.length
+            user.followingsCount = userFromDB.followings.length
+            user.sortindex = Date.parse(userFromDB.createdAt)
+            user.following = followersIds.includes(authedUser)
+    
+            formatedUsers[userFromDB.userId] = formatUser(user)
+        }
+    }
+    return formatedUsers
+}
+
 // export const getAllUsersExeptAuthedUser = async (authedUser: string) => {
 //     const usersRepo = getRepository(Users)
 //     const users  = await usersRepo
@@ -114,7 +226,7 @@ export const getAllUserIds = async () => {
 export const getUsersByIds = async (authedUser: string, ids: string[]) => {
     // const ids = receivedIds.filter(id => id !== authedUser)
     const usersRepo = getRepository(Users)
-    console.log(ids)
+    console.log('inside getUsersByIds, ids: ', ids)
     const idsWithoutAuthedUser = ids.filter(id => id !== authedUser)
     if (ids.length !== 0) {
         const formatedUsers: UsersInterface = {};
@@ -130,9 +242,8 @@ export const getUsersByIds = async (authedUser: string, ids: string[]) => {
             .andWhere("users.verifiedAt is not null")
             .select(['followings.followingId', 'users.userId','users.firstName', 'users.lastName','users.createdAt', 'users.avatar', 'users.backgroundColor', 'users.backgroundImage','users.description', 'users.location']) 
             .getMany()
-            if (users.length === 0) {
-                return formatedUsers //will contain authed user if it was requested
-            }
+
+        
             for (let userFromDB of users) {
                 const user = {
                      ...userFromDB, 
@@ -150,8 +261,8 @@ export const getUsersByIds = async (authedUser: string, ids: string[]) => {
         
                 formatedUsers[userFromDB.userId] = formatUser(user)
             }
-            return formatedUsers
         }
+        return formatedUsers
     }
     return {}
 }
