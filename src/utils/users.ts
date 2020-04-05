@@ -71,14 +71,14 @@ export const getUnverifiedUserProfile = async (userId: string) => {
 
 export const getFollowingsIds = async (userId: string) => {
     const followingsRepo = getRepository(Followings)
-    const followings = await followingsRepo.find({where: {userId}, select: ["followingId"]})
+    const followings = await followingsRepo.find({where: {userId}, select: ["followingId"], order: {createdAt: 'DESC'}})
     const followingsIds: string[] = followings.map(following => following.followingId)
     return followingsIds
 }
 
 export const getFollowersIds = async (userId: string) => {
     const followingsRepo = getRepository(Followings)
-    const followers = await followingsRepo.find({where: {followingId: userId}, select: ["userId"]})
+    const followers = await followingsRepo.find({where: {followingId: userId}, select: ["userId"], order: {createdAt: 'DESC'}})
     const followersIds: string[] = followers.map(follower => follower.userId)
     return followersIds
 }
@@ -105,6 +105,7 @@ export const getUserFollowingsPaginated = async (authedUser: string, userId: str
     .where("users.userId in (:...ids)", { ids: followingsIds })
     .andWhere(`users.createdAt < to_timestamp(${firstRequestTime/1000})`)
     .andWhere("users.verifiedAt is not null")
+    .orderBy("users.createdAt", "DESC")
     .take(take)
     .skip(skip)
     .getMany()
@@ -169,6 +170,7 @@ export const getUserFollowersPaginated = async (authedUser: string, userId: stri
     .where("users.userId in (:...ids)", { ids: followersIds })
     .andWhere(`users.createdAt < to_timestamp(${firstRequestTime/1000})`)
     .andWhere("users.verifiedAt is not null")
+    .orderBy("users.createdAt", "DESC")
     .take(take)
     .skip(skip)
     .getMany()
