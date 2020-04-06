@@ -6,6 +6,7 @@ import {Followings} from './Followings'
 //but userId is a key... so it mean if user deletes account, another account still cant be created with that username...?
 
 @Entity()
+// @Unique(['email'])
 export class Users {
 
     @PrimaryColumn()

@@ -1,13 +1,16 @@
 import {Response, NextFunction} from 'express'
 import {RequestWithCustomProperties} from '../models/request'
 import * as auth from '../utils/authentication'
+// import { getRepository } from 'typeorm'
+// import { Tokens } from '../entity/Tokens'
 
 export const authentication = async (req: RequestWithCustomProperties, res: Response, next: NextFunction) => {
     try {
         if (!req.header('Authorization')) {
             throw new Error('authorization header not provided')
         }
-        const token = req.header('Authorization')!.replace('Bearer ','')
+        const token = req.header('Authorization')!.replace('Bearer ','') 
+
         const tokenData = await auth.decodeToken(token)
         if (!tokenData || Object.keys(tokenData).length < 2) {
             throw new Error('authentication failed')

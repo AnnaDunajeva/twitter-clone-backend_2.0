@@ -3,7 +3,7 @@ import multer, { FileFilterCallback } from 'multer'
 //import path from 'path'
 import {getPaginatedFeed, getPaginatedFeedUpdate, saveTweet, getConversationPaginated, getUserTweetsPaginated, saveLikeToggle, getTweetMedia, getUserTweetImagesPaginates, getUserTweetLikesPaginates, getUserRepliesPaginated, deleteTweet, getConversationUpdate} from '../controllers/tweets' //saveLikeToggle, getTweet, getTweetsbyId, getAllTweetsIds, 
 import {addUser, getUserProfile, getAllUsersPaginated, updateUser, getUser, getUserAvatar, getUserBackground, getUserAvatarDefault, deleteAvatar, deleteBackground} from '../controllers/users' //getUser, getAllUsers, updateUser, getUsersByIds, getUserTweetsPaginated, getRepliesPaginated
-import {login, logout, logoutAll, verifyUserEmail} from '../controllers/authentication'
+import {login, logout, logoutAll, verifyUserEmail, generateAndSendResetPasswordLink, resetPassword} from '../controllers/authentication'
 import {authentication} from '../middleware/authentication'
 import {addFollowing, getUserFollowersPaginated, deleteFollowing, getUserFollowingsPaginated} from '../controllers/followings'
 import { RequestWithCustomProperties } from '../models/request'
@@ -56,7 +56,10 @@ export const createRouter = (io: SocketIO.Server) => {
     //router.get('/test', authentication, getUserTweetsPaginated)
 
     router.post('/user', addUser)
-    router.get('/user/verify/:token', verifyUserEmail)
+
+    router.get('/identity/verify/:token', verifyUserEmail)
+    router.post('/identity/getResetPasswordLink', generateAndSendResetPasswordLink)
+    router.post('/identity/resetPassword/:token', resetPassword)
 
     //router.post('/users', authentication, getUsersByIds) //not very RESTful
     router.get('/user', authentication, getUserProfile)

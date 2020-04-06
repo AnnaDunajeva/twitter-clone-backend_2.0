@@ -48,6 +48,7 @@ export interface UpdateUserData {
     description?: string;
     location?: string;
     email?: string;
+    password?: string;
     verifiedAt?: () => string;
 }
 

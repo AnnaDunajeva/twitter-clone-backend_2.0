@@ -145,14 +145,16 @@ export const addUser: RequestHandler = async (req, res) => {
             throw new Error('Username already exists!')
         }
 
-        // if (await usersRepo.findOne({email})) { //if i use select options, then if userId is undefined, it wont return first value in column but returns undefined
-        //                                         //this is unreliable, should rexrite it probably
-        //     throw new Error('Email already taken!')
-        // }
+        if (await usersRepo.findOne({email})) { //if i use select options, then if userId is undefined, it wont return first value in column but returns undefined
+                                                //this is unreliable, should rexrite it probably
+            throw new Error('Email already taken!')
+        }
         if (!validateEmail(email)) {
             throw new Error('Provided email adress is invalid!')
         }
         
+        //TODO: check if password is strong enough
+
         const user = { 
             userId: userId.toLowerCase(),
             firstName: firstName, 
@@ -167,6 +169,7 @@ export const addUser: RequestHandler = async (req, res) => {
             location: null,
             verifiedAt: null
         }
+        //wrap in try catch to send custom error message if error occurs
         await usersRepo
                 .createQueryBuilder('users')
                 .insert()
@@ -255,7 +258,7 @@ export const updateUser = async (req: RequestWithCustomProperties, res: Response
         const crop = userDataToUpdate.crop || null
         
         //need to somehow validate data that user wants to change
-        const supportedProperties = ['firstName', 'lastName', 'location', 'description', 'avatar', 'email', 'backgroundColor', 'backgroundImage', 'crop']
+        const supportedProperties = ['firstName', 'lastName', 'location', 'description', 'avatar', 'backgroundColor', 'backgroundImage', 'crop']
         if (Object.keys(userDataToUpdate).length === 0) {
             throw new Error('No fields provided.')
         }

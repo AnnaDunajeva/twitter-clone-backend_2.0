@@ -4,6 +4,7 @@ import {getRepository} from "typeorm"
 import { VerificationTokens } from '../entity/VerificationTokens'
 import cryptoRandomString = require('crypto-random-string');
 import { Users } from '../entity/Users';
+import { ResetPasswordTokens } from '../entity/ResetPasswordTokens';
 
 export const privateKey = process.env.JWT_TOKEN as string
 
@@ -40,7 +41,7 @@ export const generateEmailVerificationToken = async (userId: string) => {
   return token
 }
 
-export const decodeEmailVerificationToken = async (token: string) => {
+export const verifyAndDecodeEmailVerificationToken = async (token: string) => {
   try {
     const decoded = jwt.verify(token, privateKey) as {tokenId: string, userId: string, exp: number}
 
@@ -90,4 +91,49 @@ export const checkAndDeleteExpiredUnverifiedAccount = async (user: Users) => {
       return true
   }
   return false
+}
+
+export const generateRestPasswordToken = async (email: string) => {
+  const time = Date.now()
+  const exp = time + 900000 //15 min
+  const token = jwt.sign({email, exp }, privateKey) //has iat property for some reason as well
+  
+  const emailVerificationTokensRepo = getRepository(ResetPasswordTokens)
+  const prevToken = await emailVerificationTokensRepo.findOne({email})
+  if (prevToken) {
+    await emailVerificationTokensRepo
+    .createQueryBuilder('emailVerificationTokensRepo')
+    .delete()
+    .where("email = :email", { email })
+    .execute();
+  }
+  const databaseToken = {
+    tokenId: token,
+    email,
+    createdAt: () => `to_timestamp(${time/1000})`
+  }
+  await emailVerificationTokensRepo
+    .createQueryBuilder('ResetPasswordTokens')
+    .insert()
+    .values(databaseToken)
+    .execute();
+    
+  return token
+}
+
+export const verifyAndDecodeResetPasswordToken = async (token: string) => {
+  try {
+    const decoded = jwt.verify(token, privateKey) as {email: string, exp: number}
+
+    const resetPasswordTokensRepo = getRepository(ResetPasswordTokens)
+    const databaseTokenData = await resetPasswordTokensRepo.findOne({email: decoded.email, tokenId: token})
+    if (databaseTokenData) {
+      return decoded
+    }
+    return null
+  }
+  catch (err) { //dont really want to show weird jwt errors on client side
+    console.log(err)
+    throw new Error('Could not reset password!')
+  }
 }

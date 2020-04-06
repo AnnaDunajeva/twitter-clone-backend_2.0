@@ -115,6 +115,26 @@ export const sendEmailConfirmation = async (to: string, token: string, url: stri
         throw new Error('Could not send verification email.')
     }
 }
+export const sendResetPasswordLink = async (to: string, token: string, url: string) => {
+    try {
+        const link = url+'/'+token
+
+        const emailTemplate = await fsPromises.readFile('assets/password-email.html', 'utf8')
+        const email = emailTemplate.replace('reset password link', link)
+        const msg = {
+            to,
+            from: process.env.SENDGRID_FROM_EMAIL as string,
+            subject: 'Your Twitter Clone reset password link is ready!',
+            html: email
+        };
+        console.log('about to send reset password email...')
+        await sgMail.send(msg);
+    }
+    catch (err) {
+        console.error(err.toString());
+        throw new Error('Could not send reset password link.')
+    }
+}
 
 //! # $ % & ‘ * + – / = ? ^ ` . { | } ~ characters are legal in the local part of an e-mail 
 //address but in this regular expression those characters are filtered out. 
