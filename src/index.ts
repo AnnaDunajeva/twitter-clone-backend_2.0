@@ -3,9 +3,28 @@ import {createConnection} from "typeorm";
 import express from 'express' 
 import {json} from 'body-parser'
 import {createRouter} from './routes/routes'
-import cors from 'cors'
+// import cors from 'cors'
 import * as http from 'http'
 import socketio from 'socket.io';
+// import cookieParser from 'cookie-parser'
+import session from 'express-session'
+import pgSessionStore from 'connect-pg-simple'
+
+
+
+//============
+// CREATE TABLE "session" (
+//    "sid" varchar NOT NULL COLLATE "default",
+// 	"sess" json NOT NULL,
+// 	"expire" timestamp(6) NOT NULL
+// )
+// WITH (OIDS=FALSE);
+
+// ALTER TABLE "session" ADD CONSTRAINT "session_pkey" PRIMARY KEY ("sid") NOT DEFERRABLE INITIALLY IMMEDIATE;
+
+// CREATE INDEX "IDX_session_expire" ON "session" ("expire");
+//===============
+
 
 //TODO: app socket io. Client will connect to socket server. Then socket will emmit event update for each tweet when something happens 
 //with this tweet. On client side I will subcscribe on tweet level each tweet to listen for update. When tweet is unmounted I will
@@ -78,12 +97,41 @@ createConnection({
    console.log("connectiong to database...");
    
    const app = express()
-   app.use(cors())
+
+   // const corsOptions = {
+   //    origin: 'http://localhost:3000',
+   //    methods: "GET,HEAD,POST,PATCH,DELETE,OPTIONS",
+   //    credentials: true,                // required to pass
+   //    allowedHeaders: "Content-Type, Authorization, X-Requested-With",
+   //  }
+   //  // intercept pre-flight check for all routes
+   //  app.options('*', cors(corsOptions))
+
+   // app.use(cors(corsOptions))
+   
    app.use(json())
+
+   app.use(session({
+      name: process.env.SESSION_NAME || 'sid',
+      resave: false,
+      saveUninitialized: false,
+      store: new (pgSessionStore(session))({
+         conString: `postgresql://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`
+      }),
+      secret: process.env.SESSION_SECRET as string || '8437698t3ginjssfu98452-irokrgkl78t6rertvcx',
+      cookie: {
+         maxAge: parseInt(process.env.SESSION_LIFETIME || '3600000'),
+         sameSite: true,
+         httpOnly: true, 
+         // path: '/',
+         // domain: 'http://localhost:3001',
+         secure: false //should be true in production
+      }
+   }))
+
    const  server = http.createServer(app);
 
    const port = process.env.PORT
-   // app.listen(port)
    server.listen(port)
 
    console.log('server is listening on port ', port)

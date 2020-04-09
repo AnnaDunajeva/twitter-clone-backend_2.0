@@ -3,7 +3,7 @@ import multer, { FileFilterCallback } from 'multer'
 //import path from 'path'
 import {getPaginatedFeed, getPaginatedFeedUpdate, saveTweet, getConversationPaginated, getUserTweetsPaginated, saveLikeToggle, getTweetMedia, getUserTweetImagesPaginates, getUserTweetLikesPaginates, getUserRepliesPaginated, deleteTweet, getConversationUpdate} from '../controllers/tweets' //saveLikeToggle, getTweet, getTweetsbyId, getAllTweetsIds, 
 import {addUser, getUserProfile, getAllUsersPaginated, updateUser, getUser, getUserAvatar, getUserBackground, getUserAvatarDefault, deleteAvatar, deleteBackground} from '../controllers/users' //getUser, getAllUsers, updateUser, getUsersByIds, getUserTweetsPaginated, getRepliesPaginated
-import {login, logout, logoutAll, verifyUserEmail, generateAndSendResetPasswordLink, resetPassword} from '../controllers/authentication'
+import {login, logout, verifyUserEmail, generateAndSendResetPasswordLink, resetPassword} from '../controllers/authentication'
 import {authentication} from '../middleware/authentication'
 import {addFollowing, getUserFollowersPaginated, deleteFollowing, getUserFollowingsPaginated} from '../controllers/followings'
 import { RequestWithCustomProperties } from '../models/request'
@@ -103,7 +103,7 @@ export const createRouter = (io: SocketIO.Server) => {
     router.post('/user/login', login)
     //maybe i dont need authentication to logOut?
     router.post('/user/logout', authentication, logout)
-    router.post('/user/logoutAll', authentication, logoutAll)
+    // router.post('/user/logoutAll', authentication, logoutAll)
 
     return router
 }

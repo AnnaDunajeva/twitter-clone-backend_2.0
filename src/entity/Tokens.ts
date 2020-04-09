@@ -9,6 +9,9 @@ export class Tokens {
     @Column()
     userId!: string
 
+    // @Column('timestamp with time zone')
+    // createdAt!: string;
+
     @ManyToOne(() => Users, users => users.tokens)
     @JoinColumn({name: 'userId'})
     user!: string;

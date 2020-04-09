@@ -178,7 +178,7 @@ export const addUser: RequestHandler = async (req, res) => {
         
         const verificationToken = await auth.generateEmailVerificationToken(user.userId)
 
-        await sendEmailConfirmation(email, verificationToken, 'http://localhost:3000/verify') //dunno how to get it from req
+        await sendEmailConfirmation(email, verificationToken, 'http://localhost/verify') //dunno how to get it from req
         //I think in case of email error no need really to delete user from db here as it will be eligible for delete after 24h anyway if not verified    
     
         // const userProfile = await users.getUserProfile(userId)

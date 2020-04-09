@@ -5,6 +5,8 @@ import { VerificationTokens } from '../entity/VerificationTokens'
 import cryptoRandomString = require('crypto-random-string');
 import { Users } from '../entity/Users';
 import { ResetPasswordTokens } from '../entity/ResetPasswordTokens';
+// import {JWT_VALID_DURATION} from './constants'
+// import {v4 as uuid} from 'uuid'
 
 export const privateKey = process.env.JWT_TOKEN as string
 
@@ -12,6 +14,28 @@ export const generateAuthToken = (userId: string) => {
   const token = jwt.sign({userId: userId}, privateKey) 
   return token
 }
+
+// export const generateJwtToken = (userId: string, time: number) => {
+//   const token = jwt.sign({userId: userId, exp: time + JWT_VALID_DURATION}, privateKey) //exp should be actually in sec
+//   return token
+// }
+
+// export const generateRefreshToken = async (userId: string, time: number) => {
+//   const refreshToken = uuid()
+//   const createdAt = () => `to_timestamp(${time/1000})`
+//   const dataToInsertInDb = {
+//     userId,
+//     createdAt,
+//     tokenId: refreshToken
+//   }
+//   await getRepository(Tokens)
+//   .createQueryBuilder('tokens')
+//   .insert()
+//   .values(dataToInsertInDb)
+//   .execute();
+
+//   return refreshToken
+// }
 
 export const decodeToken = async (token: string) => {
     const decoded = jwt.verify(token, privateKey) as {userId: string}
