@@ -61,7 +61,7 @@ import { ResetPasswordTokens } from '../entity/ResetPasswordTokens'
 
 export const verifyUserEmail = async (req: RequestWithCustomProperties, res: Response) => {
     try {
-        const verificationToken = req.params.token
+        const verificationToken = req.body.token
         const verificationTokensRepo = getRepository(VerificationTokens)
         
         const decodedToken = await auth.verifyAndDecodeEmailVerificationToken(verificationToken)
@@ -161,7 +161,14 @@ export const login: RequestHandler = async (req, res) => {
         } 
 
         req.session!.userId = userId
-        // req.session!.save(err => console.log(err))
+        
+        //add userId cookie
+        res.cookie(process.env.USER_COOKIE_ID || 'id', user.userId, {
+            maxAge: parseInt(process.env.SESSION_LIFETIME || '3600000'),
+            sameSite: true,
+            httpOnly: false, 
+            secure: false //should be true in production
+        })
 
         const userProfile = await users.getUserProfile(userId)
 
@@ -191,7 +198,9 @@ export const logout = async (req: RequestWithCustomProperties, res: Response) =>
                 throw new Error('Oop, something went wrong. Please try again.')
             }
         })
-        res.clearCookie(process.env.SESSION_NAME as string)
+        res.clearCookie(process.env.SESSION_NAME as string || 'sid')
+        res.clearCookie(process.env.USER_COOKIE_ID || 'id')
+        res.clearCookie(process.env.CSRF_COOKIE_KEY || 'XSRF-TOKEN')
 
         res.status(201).json({message: "success", status: "ok"})
     }
@@ -243,7 +252,7 @@ export const generateAndSendResetPasswordLink = async (req: RequestWithCustomPro
 
 export const resetPassword = async (req: RequestWithCustomProperties, res: Response) => {
     try {
-        const resetPasswordToken = req.params.token
+        const resetPasswordToken = req.body.token
         const password = req.body.password
 
         const ResetPasswordTokensRepo = getRepository(ResetPasswordTokens)

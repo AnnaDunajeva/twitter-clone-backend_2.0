@@ -3,14 +3,18 @@ import {createConnection} from "typeorm";
 import express from 'express' 
 import {json} from 'body-parser'
 import {createRouter} from './routes/routes'
+import routesWithoutAuth from './routes/withoutAuthRoutes'
 // import cors from 'cors'
 import * as http from 'http'
 import socketio from 'socket.io';
 // import cookieParser from 'cookie-parser'
 import session from 'express-session'
 import pgSessionStore from 'connect-pg-simple'
+// import cookieParser from "cookie-parser";
+import csurf from 'csurf'
 
-
+//if you don't support CORS and your APIs are strictly JSON, there is absolutely no point in adding CSRF tokens to your AJAX calls.
+//But to be safe, you should still enable them whenever possible and especially when it's non-trivial to implement.
 
 //============
 // CREATE TABLE "session" (
@@ -111,6 +115,15 @@ createConnection({
    
    app.use(json())
 
+   //app.disable( 'x-powered-by' ) ;
+   // app.use( function( req, res, next ) {
+   //    res.header( 'Strict-Transport-Security', 7776000000 ) ;
+   //    res.header( 'X-Frame-Options', 'SAMEORIGIN' ) ;
+   //    res.header( 'X-XSS-Protection', 0 ) ;
+   //    res.header( 'X-Content-Type-Options', 'nosniff' ) ;
+   //    next() ;
+   //  } ) ;
+
    app.use(session({
       name: process.env.SESSION_NAME || 'sid',
       resave: false,
@@ -129,6 +142,15 @@ createConnection({
       }
    }))
 
+   app.use('/', routesWithoutAuth)
+
+   const csrfProtection = csurf()
+   app.use(csrfProtection)
+   app.use(function (req, res, next) { //new token on each request BREACH attack protection
+      res.cookie(process.env.CSRF_COOKIE_KEY || 'XSRF-TOKEN', req.csrfToken())
+      next()
+   })
+
    const  server = http.createServer(app);
 
    const port = process.env.PORT
@@ -138,7 +160,7 @@ createConnection({
    
    const io = setUpSocketIo(server)
 
-   app.use('/', createRouter(io))
+   app.use('/', createRouter(io, csrfProtection))
 
 }).catch(error => console.log(error));
 

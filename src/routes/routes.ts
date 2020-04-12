@@ -1,9 +1,12 @@
-import {Router, Response, Request, NextFunction} from 'express'
+import {Router, Response, Request, NextFunction, RequestHandler} from 'express'
 import multer, { FileFilterCallback } from 'multer'
 //import path from 'path'
-import {getPaginatedFeed, getPaginatedFeedUpdate, saveTweet, getConversationPaginated, getUserTweetsPaginated, saveLikeToggle, getTweetMedia, getUserTweetImagesPaginates, getUserTweetLikesPaginates, getUserRepliesPaginated, deleteTweet, getConversationUpdate} from '../controllers/tweets' //saveLikeToggle, getTweet, getTweetsbyId, getAllTweetsIds, 
-import {addUser, getUserProfile, getAllUsersPaginated, updateUser, getUser, getUserAvatar, getUserBackground, getUserAvatarDefault, deleteAvatar, deleteBackground} from '../controllers/users' //getUser, getAllUsers, updateUser, getUsersByIds, getUserTweetsPaginated, getRepliesPaginated
-import {login, logout, verifyUserEmail, generateAndSendResetPasswordLink, resetPassword} from '../controllers/authentication'
+import {getPaginatedFeed, getPaginatedFeedUpdate, saveTweet, getConversationPaginated, getUserTweetsPaginated, saveLikeToggle, getUserTweetImagesPaginates, getUserTweetLikesPaginates, getUserRepliesPaginated, deleteTweet, getConversationUpdate} from '../controllers/tweets' //saveLikeToggle, getTweet, getTweetsbyId, getAllTweetsIds, 
+//import {getPaginatedFeed, getPaginatedFeedUpdate, saveTweet, getConversationPaginated, getUserTweetsPaginated, saveLikeToggle, getTweetMedia, getUserTweetImagesPaginates, getUserTweetLikesPaginates, getUserRepliesPaginated, deleteTweet, getConversationUpdate} from '../controllers/tweets' //saveLikeToggle, getTweet, getTweetsbyId, getAllTweetsIds, 
+import {getUserProfile, getAllUsersPaginated, updateUser, getUser, deleteAvatar, deleteBackground} from '../controllers/users' //getUser, getAllUsers, updateUser, getUsersByIds, getUserTweetsPaginated, getRepliesPaginated
+// import {addUser, getUserProfile, getAllUsersPaginated, updateUser, getUser, getUserAvatar, getUserBackground, getUserAvatarDefault, deleteAvatar, deleteBackground} from '../controllers/users' //getUser, getAllUsers, updateUser, getUsersByIds, getUserTweetsPaginated, getRepliesPaginated
+// import {login, logout, verifyUserEmail, generateAndSendResetPasswordLink, resetPassword} from '../controllers/authentication'
+import {logout} from '../controllers/authentication'
 import {authentication} from '../middleware/authentication'
 import {addFollowing, getUserFollowersPaginated, deleteFollowing, getUserFollowingsPaginated} from '../controllers/followings'
 import { RequestWithCustomProperties } from '../models/request'
@@ -29,7 +32,7 @@ const upload = multer({
     }
 })
 
-export const createRouter = (io: SocketIO.Server) => {
+export const createRouter = (io: SocketIO.Server, csrfProtection: RequestHandler) => {
 
     const sendTweetUpdate = (tweetId: number, tweet: TweetsInterface) => {
         // console.log('about to send tweet update ', tweetId)
@@ -53,33 +56,28 @@ export const createRouter = (io: SocketIO.Server) => {
         unsubscribeFromTweet
     }
 
-    //router.get('/test', authentication, getUserTweetsPaginated)
 
-    router.post('/user', addUser)
+    // router.put('/user', addUser)
 
-    router.get('/identity/verify/:token', verifyUserEmail)
-    router.post('/identity/getResetPasswordLink', generateAndSendResetPasswordLink)
-    router.post('/identity/resetPassword/:token', resetPassword)
+    // router.put('/identity/verify', verifyUserEmail)
+    // router.put('/identity/getResetPasswordLink', generateAndSendResetPasswordLink)
+    // router.put('/identity/resetPassword', resetPassword)
 
-    //router.post('/users', authentication, getUsersByIds) //not very RESTful
     router.get('/user', authentication, getUserProfile)
-    router.get('/user/:userId/avatar', getUserAvatar) //donno, no auth kinda sucks, but twitter doesnt have it either
-    router.get('/user/:userId/avatar/default', getUserAvatarDefault) //donno, no auth kinda sucks, but twitter doesnt have it either
-    router.get('/user/:userId/background', getUserBackground)
+    // router.get('/user/:userId/avatar', getUserAvatar) //donno, no auth kinda sucks, but twitter doesnt have it either
+    // router.get('/user/:userId/avatar/default', getUserAvatarDefault) //donno, no auth kinda sucks, but twitter doesnt have it either
+    // router.get('/user/:userId/background', getUserBackground)
     router.delete('/user/avatar', authentication, deleteAvatar)
     router.delete('/user/background', authentication, deleteBackground)
     router.get('/users', authentication, getAllUsersPaginated) //without authed user
 
-    // router.patch('/user', authentication, updateUser)
     router.patch('/user', authentication, upload.single('file'), updateUser, (err: Error, req: Request, res: Response, next: NextFunction) => res.status(400).json({error: err.message, status: "error"}))
-    // router.delete('/user')
 
     router.get('/users/:userId', authentication, getUser)
 
     router.get('/user/feed',authentication, getPaginatedFeed)
     router.get('/user/feed/update', authentication, getPaginatedFeedUpdate)
-    //router.post('/tweets', authentication, getTweetsbyId) //not very RESTful
-    //router.get('/user/tweets/:tweetId', authentication, getTweet)
+
     router.get('/user/tweets/:tweetId/conversation', authentication, getConversationPaginated)
     router.get('/user/tweets/:tweetId/conversation/update', authentication, getConversationUpdate)
     router.get('/users/:userId/tweets', authentication, getUserTweetsPaginated)
@@ -87,22 +85,20 @@ export const createRouter = (io: SocketIO.Server) => {
     router.get('/users/:userId/tweets/likes', authentication, getUserTweetLikesPaginates)
     router.get('/users/:userId/tweets/replies', authentication, getUserRepliesPaginated)
 
-    router.get('/user/tweet/:tweetId/media', getTweetMedia)
+    // router.get('/user/tweet/:tweetId/media', getTweetMedia)
     
     router.delete('/user/tweet/:tweetId', authentication, (req, res) => deleteTweet(req, res, ioFuncs))
-    router.post('/user/tweet', authentication, upload.single('file'), (req: RequestWithCustomProperties, res: Response) => saveTweet(req, res, ioFuncs), (err: Error, req: Request, res: Response, next: NextFunction) => res.status(400).json({error: err.message, status: "error"}))
-    // router.delete('/user/tweet/:tweetId')
-    router.post('/user/tweets/like/:tweetId', authentication, (req, res)=>saveLikeToggle(req, res, ioFuncs))
+    router.put('/user/tweet', authentication, upload.single('file'), (req: RequestWithCustomProperties, res: Response) => saveTweet(req, res, ioFuncs), (err: Error, req: Request, res: Response, next: NextFunction) => res.status(400).json({error: err.message, status: "error"}))
+    router.put('/user/tweets/like/:tweetId', authentication, csrfProtection, (req, res)=>saveLikeToggle(req, res, ioFuncs))
 
     router.get('/user/:userId/followings', authentication, getUserFollowingsPaginated)
     router.get('/user/:userId/followers', authentication, getUserFollowersPaginated)
    
-    router.post('/user/followings/:userId', authentication, (req, res) => addFollowing(req, res, ioFuncs))
+    router.put('/user/followings/:userId', authentication, (req, res) => addFollowing(req, res, ioFuncs))
     router.delete('/user/followings/:userId', authentication, (req, res) => deleteFollowing(req, res, ioFuncs))
 
-    router.post('/user/login', login)
-    //maybe i dont need authentication to logOut?
-    router.post('/user/logout', authentication, logout)
+    // router.put('/user/login', login)
+    router.put('/user/logout', authentication, logout)
     // router.post('/user/logoutAll', authentication, logoutAll)
 
     return router
