@@ -93,6 +93,12 @@ export const verifyUserEmail = async (req: RequestWithCustomProperties, res: Res
         await users.updateUser(user.userId, {verifiedAt})
     
         req.session!.userId = user.userId
+        res.cookie(process.env.USER_COOKIE_ID || 'id', user.userId, {
+            maxAge: parseInt(process.env.SESSION_LIFETIME || '3600000'),
+            sameSite: true,
+            httpOnly: false, 
+            secure: false //should be true in production
+        })
     
         const userProfile = await users.getUserProfile(user.userId)
     

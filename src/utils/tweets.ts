@@ -681,3 +681,30 @@ export const deleteTweet = async (userId: string, tweetId: number) => {
     .where("tweetId = :tweetId", { tweetId })
     .execute();
 }
+
+export const getTweetLikesPaginated = async (userId: string, tweetId: number, skip: number, take: number, firstRequestTime: number) => {
+    const likesRepo = getRepository(Likes) 
+    const likes = await likesRepo
+    .createQueryBuilder('likes')
+    .where("likes.tweetId = :tweetId", {tweetId})
+    .andWhere('likes.deletedAt is null')
+    .andWhere(`likes.createdAt < to_timestamp(${firstRequestTime/1000})`)
+    .select(['likes.userId'])
+    .orderBy("likes.createdAt", "DESC")
+    .take(take)
+    .skip(skip)
+    .getMany()
+
+    if (likes.length === 0) {
+        return {
+            users: {}
+        }
+    }
+
+    const userIds = likes.map(like => like.userId)
+
+    const users = await usersFunctions.getUsersByIds(userId, userIds)
+
+    return users
+    
+}

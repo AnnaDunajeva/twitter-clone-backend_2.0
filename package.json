@@ -43,7 +43,8 @@
       "sharp": "^0.25.1",
       "socket.io": "^2.3.0",
       "typeorm": "0.2.22",
-      "uuid": "^3.4.0"
+      "uuid": "^3.4.0",
+      "validator": "^13.0.0"
    },
    "scripts": {
       "start": "env-cmd -f ./env/dev.env ts-node src/index.ts"

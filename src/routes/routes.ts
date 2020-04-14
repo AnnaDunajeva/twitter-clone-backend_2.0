@@ -1,7 +1,19 @@
 import {Router, Response, Request, NextFunction, RequestHandler} from 'express'
 import multer, { FileFilterCallback } from 'multer'
 //import path from 'path'
-import {getPaginatedFeed, getPaginatedFeedUpdate, saveTweet, getConversationPaginated, getUserTweetsPaginated, saveLikeToggle, getUserTweetImagesPaginates, getUserTweetLikesPaginates, getUserRepliesPaginated, deleteTweet, getConversationUpdate} from '../controllers/tweets' //saveLikeToggle, getTweet, getTweetsbyId, getAllTweetsIds, 
+import {
+    getPaginatedFeed, 
+    getPaginatedFeedUpdate, 
+    saveTweet, 
+    getConversationPaginated, 
+    getUserTweetsPaginated, 
+    saveLikeToggle, 
+    getUserTweetImagesPaginates, 
+    getUserTweetLikesPaginates, 
+    getUserRepliesPaginated, 
+    deleteTweet, 
+    getConversationUpdate, 
+    getTweetLikesPaginated} from '../controllers/tweets' //saveLikeToggle, getTweet, getTweetsbyId, getAllTweetsIds, 
 //import {getPaginatedFeed, getPaginatedFeedUpdate, saveTweet, getConversationPaginated, getUserTweetsPaginated, saveLikeToggle, getTweetMedia, getUserTweetImagesPaginates, getUserTweetLikesPaginates, getUserRepliesPaginated, deleteTweet, getConversationUpdate} from '../controllers/tweets' //saveLikeToggle, getTweet, getTweetsbyId, getAllTweetsIds, 
 import {getUserProfile, getAllUsersPaginated, updateUser, getUser, deleteAvatar, deleteBackground} from '../controllers/users' //getUser, getAllUsers, updateUser, getUsersByIds, getUserTweetsPaginated, getRepliesPaginated
 // import {addUser, getUserProfile, getAllUsersPaginated, updateUser, getUser, getUserAvatar, getUserBackground, getUserAvatarDefault, deleteAvatar, deleteBackground} from '../controllers/users' //getUser, getAllUsers, updateUser, getUsersByIds, getUserTweetsPaginated, getRepliesPaginated
@@ -79,6 +91,7 @@ export const createRouter = (io: SocketIO.Server, csrfProtection: RequestHandler
     router.get('/user/feed/update', authentication, getPaginatedFeedUpdate)
 
     router.get('/user/tweets/:tweetId/conversation', authentication, getConversationPaginated)
+    router.get('/tweet/:tweetId/likes', authentication, getTweetLikesPaginated)
     router.get('/user/tweets/:tweetId/conversation/update', authentication, getConversationUpdate)
     router.get('/users/:userId/tweets', authentication, getUserTweetsPaginated)
     router.get('/users/:userId/tweets/media', authentication, getUserTweetImagesPaginates)

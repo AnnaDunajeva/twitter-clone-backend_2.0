@@ -456,3 +456,25 @@ export const deleteTweet = async (req: RequestWithCustomProperties, res: Respons
         res.status(400).json({error: err.message, status: "error"}) 
     }
 }
+
+export const getTweetLikesPaginated = async (req: RequestWithCustomProperties, res: Response) => {
+    try{
+        const userId = req.userId as string
+        const tweetId = parseInt(req.params.tweetId)
+        const take = parseInt(req.query.take)
+        const skip = parseInt(req.query.skip)
+        const firstRequestTime = parseInt(req.query.time)
+
+        if (isNaN(take) || isNaN(skip) || isNaN(firstRequestTime) || isNaN(tweetId) || take === undefined || skip === undefined || firstRequestTime === undefined || tweetId === undefined) {
+            throw new Error('missing pagination parameters')
+        }
+
+        const users = await tweetsFunc.getTweetLikesPaginated(userId, tweetId, skip, take, firstRequestTime)
+
+        res.status(201).json({ users, status: "ok" })
+    }
+    catch (err) {
+        console.log(err)
+        res.status(400).json({error: err.message, status: "error"})
+    }
+}

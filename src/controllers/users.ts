@@ -126,6 +126,7 @@ export const addUser: RequestHandler = async (req, res) => {
     try {
         const usersRepo = getRepository(Users)
         const {userId, firstName, lastName, password, email} = req.body as {userId: string, firstName: string, lastName: string,  password: string, email: string}
+        
         // const problem = await usersRepo.findOne(undefined)
         // console.log(problem)
         if (!(userId && firstName && lastName && email && password)) {
