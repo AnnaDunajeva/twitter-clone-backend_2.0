@@ -81,7 +81,7 @@ createConnection({
     "password": process.env.DB_PASSWORD,
     "database": process.env.DB_NAME,
     "synchronize": true,
-    "logging": false,
+    "logging": true,
     "entities": [
        "src/entity/**/*.ts"
     ],

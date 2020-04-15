@@ -15,7 +15,7 @@ import {
     getConversationUpdate, 
     getTweetLikesPaginated} from '../controllers/tweets' //saveLikeToggle, getTweet, getTweetsbyId, getAllTweetsIds, 
 //import {getPaginatedFeed, getPaginatedFeedUpdate, saveTweet, getConversationPaginated, getUserTweetsPaginated, saveLikeToggle, getTweetMedia, getUserTweetImagesPaginates, getUserTweetLikesPaginates, getUserRepliesPaginated, deleteTweet, getConversationUpdate} from '../controllers/tweets' //saveLikeToggle, getTweet, getTweetsbyId, getAllTweetsIds, 
-import {getUserProfile, getAllUsersPaginated, updateUser, getUser, deleteAvatar, deleteBackground} from '../controllers/users' //getUser, getAllUsers, updateUser, getUsersByIds, getUserTweetsPaginated, getRepliesPaginated
+import {getUserProfile, findUserPaginated, getAllUsersPaginated, updateUser, getUser, deleteAvatar, deleteBackground} from '../controllers/users' //getUser, getAllUsers, updateUser, getUsersByIds, getUserTweetsPaginated, getRepliesPaginated
 // import {addUser, getUserProfile, getAllUsersPaginated, updateUser, getUser, getUserAvatar, getUserBackground, getUserAvatarDefault, deleteAvatar, deleteBackground} from '../controllers/users' //getUser, getAllUsers, updateUser, getUsersByIds, getUserTweetsPaginated, getRepliesPaginated
 // import {login, logout, verifyUserEmail, generateAndSendResetPasswordLink, resetPassword} from '../controllers/authentication'
 import {logout} from '../controllers/authentication'
@@ -86,6 +86,7 @@ export const createRouter = (io: SocketIO.Server, csrfProtection: RequestHandler
     router.patch('/user', authentication, upload.single('file'), updateUser, (err: Error, req: Request, res: Response, next: NextFunction) => res.status(400).json({error: err.message, status: "error"}))
 
     router.get('/users/:userId', authentication, getUser)
+    router.get('/users/find/:userId', authentication, findUserPaginated)
 
     router.get('/user/feed',authentication, getPaginatedFeed)
     router.get('/user/feed/update', authentication, getPaginatedFeedUpdate)

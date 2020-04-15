@@ -329,3 +329,86 @@ export const getAllUsersPaginated = async (authedUser: string, skip: number, tak
 
     return formatedUsers
 }
+
+export const findUserPaginated = async (authedUser: string, userToFind: string, skip: number, take: number, firstRequestTime: number) => {
+    const usersRepo = getRepository(Users)
+    const users  = await usersRepo
+    // .createQueryBuilder("users")
+    // .leftJoin("users.followings", "followings")
+    // .select(['followings.followingId', 'users.userId','users.firstName', 'users.lastName','users.createdAt', 'users.avatar', 'users.backgroundColor', 'users.backgroundImage','users.description', 'users.location']) 
+    // .where('users.userId like :id', {id: userToFind+'%'})
+    // .andWhere(`users.createdAt < to_timestamp(${firstRequestTime/1000})`) 
+    // .andWhere("users.verifiedAt is not null")
+    // // .orderBy(`"users"."userId" like '${userToFind}%' or null`)
+    // .take(take)
+    // .skip(skip)
+    // .getMany()
+
+    .createQueryBuilder("users")
+    .leftJoin("users.followings", "followings")
+    .select(['followings.followingId', 'users.userId','users.firstName', 'users.lastName','users.createdAt', 'users.avatar', 'users.backgroundColor', 'users.backgroundImage','users.description', 'users.location']) 
+    .addSelect(
+        `ts_rank(
+            (
+                setweight(to_tsvector('simple', "users"."userId"), 'A') || 
+                setweight(to_tsvector('english', "firstName"), 'B') || 
+                setweight(to_tsvector('english', "lastName"), 'C')            
+            ),
+            to_tsquery('simple', '${userToFind}')
+        ) +
+        ts_rank(
+            (
+                setweight(to_tsvector('simple', "users"."userId"), 'A') || 
+                setweight(to_tsvector('english', "firstName"), 'B') || 
+                setweight(to_tsvector('english', "lastName"), 'C')            
+            ),
+            to_tsquery('simple', '${userToFind}:*')
+        )
+        `, "result_rank"
+    )
+    .where(`(
+        (
+            setweight(to_tsvector('simple', "users"."userId"), 'A') || 
+            setweight(to_tsvector('english', "firstName"), 'B') || 
+            setweight(to_tsvector('english', "lastName"), 'C')
+        ) @@
+        (
+            to_tsquery('simple', '${userToFind}:*')
+        )
+    )`)
+    .andWhere(`users.createdAt < to_timestamp(${firstRequestTime/1000})`) 
+    .andWhere("users.verifiedAt is not null")
+    .orderBy("result_rank", 'DESC')
+    .take(take)
+    .skip(skip)
+    .getMany()
+
+    console.log(users)
+
+    if(users.length === 0) {
+        return {}
+    }
+
+    const formatedUsers: UsersInterface = {};
+    await Promise.all(
+        users.map(async (userFromDB, index) => {
+            const user = { 
+                ...userFromDB,
+                avatar: userFromDB.avatar ? true : false,
+                backgroundImage: userFromDB.backgroundImage ? true : false
+            } as ExtendedUser
+            const followersIds: string[] = await getFollowersIds(userFromDB.userId)
+
+            user.followersCount = followersIds.length
+            user.followingsCount = userFromDB.followings.length
+            user.sortindex = index
+            user.following = followersIds.includes(authedUser)
+
+            formatedUsers[userFromDB.userId] = formatUser(user)
+        })
+    )
+
+    //we need sortindex and following properties here (which for now is just createAt in unix)
+
+    return formatedUsers
+}

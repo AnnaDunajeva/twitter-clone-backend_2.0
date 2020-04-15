@@ -72,7 +72,6 @@ export const saveLikeToggle = async (req: RequestWithCustomProperties, res: Resp
 
 export const saveTweet = async (req: RequestWithCustomProperties, res: Response, ioFuncs: IoFuncInterface) => {
     try {
-        // throw new Error('error check')
         const data = JSON.parse(req.body.tweet)
         console.log(data)
         const userId = req.userId as string

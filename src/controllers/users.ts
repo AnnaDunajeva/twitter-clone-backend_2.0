@@ -346,6 +346,31 @@ export const getAllUsersPaginated = async (req: RequestWithCustomProperties, res
         res.status(400).json({error: err.message, status: "error"})
     }
 }
+
+export const findUserPaginated = async (req: RequestWithCustomProperties, res: Response) => {
+    //findUserPaginated
+    try{
+        const userId = req.userId as string
+        const userTofind = req.params.userId
+        const take = parseInt(req.query.take)
+        const skip = parseInt(req.query.skip)
+        const firstRequestTime = parseInt(req.query.time)
+        console.log('userTofind: ', userTofind)
+
+        if (isNaN(take) || isNaN(skip) || isNaN(firstRequestTime) || take === undefined || skip === undefined || firstRequestTime === undefined || userId === undefined) {
+            throw new Error('missing pagination parameters')
+        }
+
+        const userProfiles = await users.findUserPaginated(userId, userTofind, skip, take, firstRequestTime)
+
+        res.status(201).json({ users: userProfiles, status: "ok" })
+    }
+    catch (err) {
+        console.log(err)
+        res.status(400).json({error: err.message, status: "error"})
+    }
+}
+
 // export const deleteUser = async (req: RequestWithCustomProperties, res: Response) => {
 //     try {
 //         const userId = req.userId as string
