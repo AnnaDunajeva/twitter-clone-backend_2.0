@@ -13,8 +13,7 @@ import * as auth from '../utils/authentication'
 import { DefaultProfileImage } from "../entity/DefaultProfileImage"
 import sharp from 'sharp'
 import {omit} from 'lodash'
-import {sendEmailConfirmation} from '../utils/helpers'
-import {validateEmail} from '../utils/helpers'
+import {sendEmailConfirmation, validateEmail, removeBlacklistCharsForSearch, sanitazeFirstOrLastname, sanitazeUsername} from '../utils/helpers'
 // import {IoFuncInterface} from '../models/ioFuncs'
 
 export const getUserProfile = async (req: RequestWithCustomProperties, res: Response) => {
@@ -157,9 +156,9 @@ export const addUser: RequestHandler = async (req, res) => {
         //TODO: check if password is strong enough
 
         const user = { 
-            userId: userId.toLowerCase(),
-            firstName: firstName, 
-            lastName: lastName,
+            userId: sanitazeUsername(userId.toLowerCase()),
+            firstName: sanitazeFirstOrLastname(firstName), 
+            lastName: sanitazeFirstOrLastname(lastName),
             email: email,
             password: await bcrypt.hash(password.toString(), 8), //8 should be changed to 12!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             createdAt: () => `to_timestamp(${Date.now()/1000})`, //postgres func to_timestamp accepts unix time in sec
@@ -277,6 +276,19 @@ export const updateUser = async (req: RequestWithCustomProperties, res: Response
         } else if (file && userDataToUpdate.avatar) {
             userDataToUpdate.avatar = await sharp(file).extract({left: Math.round(crop.x), top: Math.round(crop.y), width: Math.round(crop.width), height: Math.round(crop.height)}).resize({width: 200, height: 200}).jpeg().toBuffer()
         }
+        if (userDataToUpdate.firstName) {
+            userDataToUpdate.firstName = sanitazeFirstOrLastname(userDataToUpdate.firstName)
+        }
+        if (userDataToUpdate.lastName) {
+            userDataToUpdate.lastName = sanitazeFirstOrLastname(userDataToUpdate.lastName)
+        }
+        if (userDataToUpdate.location) {
+            userDataToUpdate.location = userDataToUpdate.location.trim()
+        }
+        if (userDataToUpdate.description) {
+            userDataToUpdate.description = userDataToUpdate.description.trim()
+        }
+
         console.log(userDataToUpdate)
 
         await users.updateUser(userId, omit(userDataToUpdate, 'crop'))
@@ -351,7 +363,7 @@ export const findUserPaginated = async (req: RequestWithCustomProperties, res: R
     //findUserPaginated
     try{
         const userId = req.userId as string
-        const userTofind = req.params.userId
+        const userTofind = removeBlacklistCharsForSearch(req.params.userId) 
         const take = parseInt(req.query.take)
         const skip = parseInt(req.query.skip)
         const firstRequestTime = parseInt(req.query.time)

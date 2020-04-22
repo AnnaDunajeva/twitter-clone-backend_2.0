@@ -145,3 +145,20 @@ export const validateEmail = (email: string) => {
     return (false)
   }
 
+export const removeBlacklistCharsForSearch = (input: string) => {
+    return input
+        .trim()
+        .replace(/[^\w\s\-]/g, "")
+        .replace(/\s+/g, " & ")
+}
+
+export const sanitazeUsername = (input: string) => {
+    return input
+        .trim()
+        .replace(/[^\w\s\-]/g, "")
+}
+export const sanitazeFirstOrLastname = (input: string) => {
+    return input
+    .trim()
+    .replace(/[^a-zA-Z-]/g, "")
+}

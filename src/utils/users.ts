@@ -91,11 +91,42 @@ export const getAllUserIds = async () => {
 }
 
 export const getUserFollowingsPaginated = async (authedUser: string, userId: string, skip: number, take: number, firstRequestTime: number) => {
-    const followingsIds = await getFollowingsIds(userId)
+    // const followingsIds = await getFollowingsIds(userId)
     
-    if (followingsIds.length === 0) {
+    // if (followingsIds.length === 0) {
+    //     return {}
+    // }
+
+    // const usersRepo = getRepository(Users)
+    // const users  = await usersRepo
+    // .createQueryBuilder("users")
+    // .leftJoin("users.followings", "followings")
+    // .select(['followings.followingId', 'users.userId','users.firstName', 'users.lastName','users.createdAt', 'users.avatar', 'users.backgroundColor', 'users.backgroundImage','users.description', 'users.location']) 
+    // .where("users.userId in (:...ids)", { ids: followingsIds })
+    // .andWhere(`users.createdAt < to_timestamp(${firstRequestTime/1000})`)
+    // .andWhere("users.verifiedAt is not null")
+    // .orderBy("users.createdAt", "DESC")
+    // .take(take)
+    // .skip(skip)
+    // .getMany()
+
+    const followingsRepo = getRepository(Followings)
+    const followings  = await followingsRepo
+    .createQueryBuilder("followings")
+    .select(['followings.followingId', 'followings.createdAt']) 
+    .where("followings.userId = :id", { id: userId })
+    .andWhere(`followings.createdAt < to_timestamp(${firstRequestTime/1000})`)
+    .andWhere('followings.deletedAt is null')
+    .take(take)
+    .skip(skip)
+    .orderBy('followings.createdAt', 'DESC')
+    .getMany()
+
+    if (followings.length === 0) {
         return {}
     }
+
+    const followingsIds = followings.map(following => following.followingId)
 
     const usersRepo = getRepository(Users)
     const users  = await usersRepo
@@ -103,36 +134,21 @@ export const getUserFollowingsPaginated = async (authedUser: string, userId: str
     .leftJoin("users.followings", "followings")
     .select(['followings.followingId', 'users.userId','users.firstName', 'users.lastName','users.createdAt', 'users.avatar', 'users.backgroundColor', 'users.backgroundImage','users.description', 'users.location']) 
     .where("users.userId in (:...ids)", { ids: followingsIds })
-    .andWhere(`users.createdAt < to_timestamp(${firstRequestTime/1000})`)
-    .andWhere("users.verifiedAt is not null")
-    .orderBy("users.createdAt", "DESC")
-    .take(take)
-    .skip(skip)
+    // .andWhere("users.verifiedAt is not null")
     .getMany()
 
-    // const followingsRepo = getRepository(Followings)
-    // const users  = await followingsRepo
-    // .createQueryBuilder("followings")
-    // .leftJoin("users.followingId", "users")
-    // .select(['users.userId','users.firstName', 'users.lastName','users.createdAt', 'users.avatar', 'users.backgroundColor', 'users.backgroundImage','users.description', 'users.location']) 
-    // .where("followings.userId = :id", { id: userId })
-    // .andWhere(`users.createdAt < to_timestamp(${firstRequestTime/1000})`)
-    // .andWhere("users.verifiedAt is not null")
-    // .take(take)
-    // .skip(skip)
-    // .getMany() //user followers length need to be counted separetely...
-
-    if(users.length === 0) {
-        return {}
-    }
+    // if(users.length === 0) {
+    //     return {}
+    // }
 
     const formatedUsers: UsersInterface = {};
 
-    for (let userFromDB of users) {
-        if (userFromDB.userId === authedUser) {
+    await Promise.all(followings.map(async(following) => {
+        if (following.followingId === authedUser) {
             const authedUserProfile = await getUserProfile(authedUser)
             formatedUsers[authedUser] = authedUserProfile[authedUser]
         } else {
+            const userFromDB = users.find(user => user.userId === following.followingId)!
             const user = { 
                 ...userFromDB,
                 avatar: userFromDB.avatar ? true : false,
@@ -143,12 +159,35 @@ export const getUserFollowingsPaginated = async (authedUser: string, userId: str
     
             user.followersCount = followersIds.length
             user.followingsCount = userFromDB.followings.length
-            user.sortindex = Date.parse(userFromDB.createdAt)
+            // user.sortindex = Date.parse(userFromDB.createdAt)
+            user.sortindex = Date.parse(following.createdAt)
             user.following = followersIds.includes(authedUser)
     
             formatedUsers[userFromDB.userId] = formatUser(user)
         }
-    }
+    }))
+
+    // for (let userFromDB of users) {
+    //     if (userFromDB.userId === authedUser) {
+    //         const authedUserProfile = await getUserProfile(authedUser)
+    //         formatedUsers[authedUser] = authedUserProfile[authedUser]
+    //     } else {
+    //         const user = { 
+    //             ...userFromDB,
+    //             avatar: userFromDB.avatar ? true : false,
+    //             backgroundImage: userFromDB.backgroundImage ? true : false
+    //         } as ExtendedUser
+    //         const followersIds: string[] = await getFollowersIds(userFromDB.userId)
+    //         //const followingsIds = userFromDB.followings.map(following => following.followingId)
+    
+    //         user.followersCount = followersIds.length
+    //         user.followingsCount = userFromDB.followings.length
+    //         // user.sortindex = Date.parse(userFromDB.createdAt)
+    //         user.following = followersIds.includes(authedUser)
+    
+    //         formatedUsers[userFromDB.userId] = formatUser(user)
+    //     }
+    // }
 
     //we need sortindex and following properties here (which for now is just createAt in unix)
 

@@ -92,7 +92,7 @@ export const saveTweet = async (req: RequestWithCustomProperties, res: Response,
 
         const tweet = { 
             userId: userId.toLowerCase(),
-            text: data.text,
+            text: data.text ? data.text.trim() : '',
             parentId: data.replyingTo ? data.replyingTo : null,
             media: file ? await sharp(file).extract({left: Math.round(data.crop.x), top: Math.round(data.crop.y), width: Math.round(data.crop.width), height: Math.round(data.crop.height)}).resize({width: 700, height: 700}).jpeg().toBuffer() : null,
             createdAt: () => `to_timestamp(${createdAt/1000})` //postgres func to_timestamp accepts unix time in sec
