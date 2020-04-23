@@ -91,25 +91,6 @@ export const getAllUserIds = async () => {
 }
 
 export const getUserFollowingsPaginated = async (authedUser: string, userId: string, skip: number, take: number, firstRequestTime: number) => {
-    // const followingsIds = await getFollowingsIds(userId)
-    
-    // if (followingsIds.length === 0) {
-    //     return {}
-    // }
-
-    // const usersRepo = getRepository(Users)
-    // const users  = await usersRepo
-    // .createQueryBuilder("users")
-    // .leftJoin("users.followings", "followings")
-    // .select(['followings.followingId', 'users.userId','users.firstName', 'users.lastName','users.createdAt', 'users.avatar', 'users.backgroundColor', 'users.backgroundImage','users.description', 'users.location']) 
-    // .where("users.userId in (:...ids)", { ids: followingsIds })
-    // .andWhere(`users.createdAt < to_timestamp(${firstRequestTime/1000})`)
-    // .andWhere("users.verifiedAt is not null")
-    // .orderBy("users.createdAt", "DESC")
-    // .take(take)
-    // .skip(skip)
-    // .getMany()
-
     const followingsRepo = getRepository(Followings)
     const followings  = await followingsRepo
     .createQueryBuilder("followings")
@@ -137,10 +118,6 @@ export const getUserFollowingsPaginated = async (authedUser: string, userId: str
     // .andWhere("users.verifiedAt is not null")
     .getMany()
 
-    // if(users.length === 0) {
-    //     return {}
-    // }
-
     const formatedUsers: UsersInterface = {};
 
     await Promise.all(followings.map(async(following) => {
@@ -167,79 +144,60 @@ export const getUserFollowingsPaginated = async (authedUser: string, userId: str
         }
     }))
 
-    // for (let userFromDB of users) {
-    //     if (userFromDB.userId === authedUser) {
-    //         const authedUserProfile = await getUserProfile(authedUser)
-    //         formatedUsers[authedUser] = authedUserProfile[authedUser]
-    //     } else {
-    //         const user = { 
-    //             ...userFromDB,
-    //             avatar: userFromDB.avatar ? true : false,
-    //             backgroundImage: userFromDB.backgroundImage ? true : false
-    //         } as ExtendedUser
-    //         const followersIds: string[] = await getFollowersIds(userFromDB.userId)
-    //         //const followingsIds = userFromDB.followings.map(following => following.followingId)
-    
-    //         user.followersCount = followersIds.length
-    //         user.followingsCount = userFromDB.followings.length
-    //         // user.sortindex = Date.parse(userFromDB.createdAt)
-    //         user.following = followersIds.includes(authedUser)
-    
-    //         formatedUsers[userFromDB.userId] = formatUser(user)
-    //     }
-    // }
-
-    //we need sortindex and following properties here (which for now is just createAt in unix)
-
     return formatedUsers
 }
 
 export const getUserFollowersPaginated = async (authedUser: string, userId: string, skip: number, take: number, firstRequestTime: number) => {
-    const followersIds = await getFollowersIds(userId)
-    
-    if (followersIds.length === 0) {
+    const followingsRepo = getRepository(Followings)
+    const followers  = await followingsRepo
+    .createQueryBuilder("followings")
+    .select(['followings.userId', 'followings.createdAt']) 
+    .where("followings.followingId = :id", { id: userId })
+    .andWhere(`followings.createdAt < to_timestamp(${firstRequestTime/1000})`)
+    .andWhere('followings.deletedAt is null')
+    .take(take)
+    .skip(skip)
+    .orderBy('followings.createdAt', 'DESC')
+    .getMany()
+
+    if (followers.length === 0) {
         return {}
     }
+
+    const followersIds = followers.map(follower => follower.userId)
 
     const usersRepo = getRepository(Users)
     const users  = await usersRepo
-    .createQueryBuilder("users")
-    .leftJoin("users.followings", "followings")
-    .select(['followings.followingId', 'users.userId','users.firstName', 'users.lastName','users.createdAt', 'users.avatar', 'users.backgroundColor', 'users.backgroundImage','users.description', 'users.location']) 
-    .where("users.userId in (:...ids)", { ids: followersIds })
-    .andWhere(`users.createdAt < to_timestamp(${firstRequestTime/1000})`)
-    .andWhere("users.verifiedAt is not null")
-    .orderBy("users.createdAt", "DESC")
-    .take(take)
-    .skip(skip)
-    .getMany()
-
-    if(users.length === 0) {
-        return {}
-    }
+        .createQueryBuilder("users")
+        .leftJoin("users.followings", "followings")
+        .select(['followings.followingId', 'users.userId','users.firstName', 'users.lastName','users.createdAt', 'users.avatar', 'users.backgroundColor', 'users.backgroundImage','users.description', 'users.location']) 
+        .where("users.userId in (:...ids)", { ids: followersIds })
+        // .andWhere("users.verifiedAt is not null")
+        .getMany()
 
     const formatedUsers: UsersInterface = {};
 
-    for (let userFromDB of users) {
-        if (userFromDB.userId === authedUser) {
+    await Promise.all(followers.map(async(following) => {
+        if (following.userId === authedUser) {
             const authedUserProfile = await getUserProfile(authedUser)
             formatedUsers[authedUser] = authedUserProfile[authedUser]
         } else {
+            const userFromDB = users.find(user => user.userId === following.userId)!
             const user = { 
                 ...userFromDB,
                 avatar: userFromDB.avatar ? true : false,
                 backgroundImage: userFromDB.backgroundImage ? true : false
             } as ExtendedUser
-            const followersIds: string[] = await getFollowersIds(userFromDB.userId)
+            const userFollowersIds: string[] = await getFollowersIds(userFromDB.userId)
     
-            user.followersCount = followersIds.length
+            user.followersCount = userFollowersIds.length
             user.followingsCount = userFromDB.followings.length
-            user.sortindex = Date.parse(userFromDB.createdAt)
-            user.following = followersIds.includes(authedUser)
+            user.sortindex = Date.parse(following.createdAt)
+            user.following = userFollowersIds.includes(authedUser)
     
             formatedUsers[userFromDB.userId] = formatUser(user)
         }
-    }
+    }))
     return formatedUsers
 }
 
