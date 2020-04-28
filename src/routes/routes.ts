@@ -1,4 +1,4 @@
-import {Router, Response, Request, NextFunction, RequestHandler} from 'express'
+import {Router, Response, Request, NextFunction} from 'express'
 import multer, { FileFilterCallback } from 'multer'
 //import path from 'path'
 import {
@@ -30,21 +30,20 @@ const router = Router()
 
 const storage = multer.memoryStorage()
 const upload = multer({
-    // dest: path.resolve(__dirname, '..', 'images/uploads'),
     dest: 'images/uploads',
     limits: {
-        fileSize: 1000000
+        fileSize: 10000000 //10MB
     },
     storage,
     fileFilter (req: RequestWithCustomProperties, file: Express.Multer.File, cb: FileFilterCallback) {
-        if(!file.originalname.match(/\.(jpg|jpeg|png)$/)) {
+        if(!file.originalname.match(/\.(jpg|jpeg|png)$/i)) {
             return cb(new Error('Format not supported.'))
         }
         cb(null, true)
     }
 })
 
-export const createRouter = (io: SocketIO.Server, csrfProtection: RequestHandler) => {
+export const createRouter = (io: SocketIO.Server) => {
 
     const sendTweetUpdate = (tweetId: number, tweet: TweetsInterface) => {
         // console.log('about to send tweet update ', tweetId)
@@ -54,7 +53,7 @@ export const createRouter = (io: SocketIO.Server, csrfProtection: RequestHandler
         io.to(userId).emit('user_update', {userId, user})
     }
     const unsubscribeFromTweet = (tweetId: number) => {
-        console.log('about to unsubscribe all sockets from deleted tweet')
+        // console.log('about to unsubscribe all sockets from deleted tweet')
         io.in(tweetId.toString()).clients((error: Error, socketIds: any[]) => {
             if (error) {console.log(error);}
             else {socketIds.forEach(socketId => io.sockets.connected[socketId].leave(tweetId.toString()));}
@@ -103,7 +102,7 @@ export const createRouter = (io: SocketIO.Server, csrfProtection: RequestHandler
     
     router.delete('/user/tweet/:tweetId', authentication, (req, res) => deleteTweet(req, res, ioFuncs))
     router.put('/user/tweet', authentication, upload.single('file'), (req: RequestWithCustomProperties, res: Response) => saveTweet(req, res, ioFuncs), (err: Error, req: Request, res: Response, next: NextFunction) => res.status(400).json({error: err.message, status: "error"}))
-    router.put('/user/tweets/like/:tweetId', authentication, csrfProtection, (req, res)=>saveLikeToggle(req, res, ioFuncs))
+    router.put('/user/tweets/like/:tweetId', authentication, (req, res)=>saveLikeToggle(req, res, ioFuncs))
 
     router.get('/user/:userId/followings', authentication, getUserFollowingsPaginated)
     router.get('/user/:userId/followers', authentication, getUserFollowersPaginated)

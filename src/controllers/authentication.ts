@@ -1,9 +1,8 @@
 import {RequestHandler, Response} from 'express'
 import {RequestWithCustomProperties} from '../models/request'
 import {Users} from "../entity/Users"
-import {getRepository} from "typeorm"
+import {getRepository, getConnection} from "typeorm"
 import bcrypt from 'bcrypt'
-import * as tokens from '../utils/tokens'
 import * as auth from '../utils/authentication'
 import * as users from '../utils/users'
 import { VerificationTokens } from '../entity/VerificationTokens'
@@ -178,9 +177,10 @@ export const login: RequestHandler = async (req, res) => {
 
         const userProfile = await users.getUserProfile(userId)
 
-        res.status(201).json({user: userProfile, status: "ok"}).end()
+        res.status(200).json({user: userProfile, status: "ok"})
     }
     catch (err) {
+        console.log(err)
         res.status(400).json({error: err.message, status:"error"})
     }
 }
@@ -208,7 +208,7 @@ export const logout = async (req: RequestWithCustomProperties, res: Response) =>
         res.clearCookie(process.env.USER_COOKIE_ID || 'id')
         res.clearCookie(process.env.CSRF_COOKIE_KEY || 'XSRF-TOKEN')
 
-        res.status(201).json({message: "success", status: "ok"})
+        res.status(200).json({message: "success", status: "ok"})
     }
     catch(err) {
         res.status(500).json({error: err.message, status: "error"})
@@ -246,7 +246,7 @@ export const generateAndSendResetPasswordLink = async (req: RequestWithCustomPro
 
         const resetPasswordToken = await auth.generateRestPasswordToken(email)
 
-        await sendResetPasswordLink(email, resetPasswordToken, 'http://localhost/resetPassword')
+        await sendResetPasswordLink(email, resetPasswordToken, process.env.URL+'/resetPassword')
 
         res.status(201).json({message: "success", status: "ok"})
     }
@@ -294,7 +294,7 @@ export const resetPassword = async (req: RequestWithCustomProperties, res: Respo
         // const updatedAt = () => `to_timestamp(${time})`
         // await users.updateUser(user.userId, {updatedAt})
     
-        await tokens.deleteAllTokens(user.userId) //logOut user from all devices
+        await getConnection().query(`delete from session where sess ->> 'userId'='${user.userId}'`) //logOut user from all devices
     
         res.status(201).json({message: "success", status: "ok"})
     }

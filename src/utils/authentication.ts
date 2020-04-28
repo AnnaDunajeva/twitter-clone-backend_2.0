@@ -48,7 +48,7 @@ export const generateEmailVerificationToken = async (userId: string) => {
   const time = Date.now()
   const exp = time + 900000 //15 min
   const code = cryptoRandomString({length: 12, type: "base64"})
-  const token = jwt.sign({tokenId: code, userId, exp }, privateKey) 
+  const token = jwt.sign({tokenId: code, userId, exp }, privateKey) //code not really needed
   
   const emailVerificationTokensRepo = getRepository(VerificationTokens)
   const databaseToken = {

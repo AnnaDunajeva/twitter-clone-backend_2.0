@@ -21,7 +21,7 @@ export const getUserProfile = async (req: RequestWithCustomProperties, res: Resp
         const userId = req.userId as string
         const userProfile = await users.getUserProfile(userId)
     
-        res.status(201).json({user: userProfile, status: "ok"})
+        res.status(200).json({user: userProfile, status: "ok"})
     }
     catch (err) {
         res.status(400).json({error: err.message, status: "error"})
@@ -34,7 +34,7 @@ export const getUser = async (req: RequestWithCustomProperties, res: Response) =
         const userIdToGet = req.params.userId as string
         const user = await users.getUsersByIds(userId, [userIdToGet])
 
-        res.status(201).json({user: user, status: "ok"})
+        res.status(200).json({user: user, status: "ok"})
     }
     catch (err) {
         res.status(400).json({error: err, status: "error"})
@@ -78,7 +78,7 @@ export const getUserAvatar = async (req: RequestWithCustomProperties, res: Respo
         }
 
         res.set('Content-Type', 'image/jpeg')
-        res.status(201).send(avatar)
+        res.status(200).send(avatar)
     }
     catch (err) {
         res.status(400).json({error: err, status: "error"})
@@ -94,7 +94,7 @@ export const getUserAvatarDefault = async (req: RequestWithCustomProperties, res
         console.log(avatarResponse)
 
         res.set('Content-Type', 'image/jpg')
-        res.status(201).send(avatarResponse?.image || null)
+        res.status(200).send(avatarResponse?.image || null)
     }
     catch (err) {
         res.status(400).json({error: err, status: "error"})
@@ -114,7 +114,7 @@ export const getUserBackground = async (req: RequestWithCustomProperties, res: R
         const backgroundImage = user.backgroundImage
 
         res.set('Content-Type', 'image/jpg')
-        res.status(201).send(backgroundImage)
+        res.status(200).send(backgroundImage)
     }
     catch (err) {
         res.status(400).json({error: err, status: "error"})
@@ -178,7 +178,7 @@ export const addUser: RequestHandler = async (req, res) => {
         
         const verificationToken = await auth.generateEmailVerificationToken(user.userId)
 
-        await sendEmailConfirmation(email, verificationToken, 'http://localhost/verify') //dunno how to get it from req
+        await sendEmailConfirmation(email, verificationToken, process.env.URL+'/verify') //dunno how to get it from req
         //I think in case of email error no need really to delete user from db here as it will be eligible for delete after 24h anyway if not verified    
     
         // const userProfile = await users.getUserProfile(userId)
@@ -352,7 +352,7 @@ export const getAllUsersPaginated = async (req: RequestWithCustomProperties, res
 
         const userProfiles = await users.getAllUsersPaginated(userId, skip, take, firstRequestTime)
 
-        res.status(201).json({ users: userProfiles, status: "ok" })
+        res.status(200).json({ users: userProfiles, status: "ok" })
     }
     catch (err) {
         res.status(400).json({error: err.message, status: "error"})
@@ -375,7 +375,7 @@ export const findUserPaginated = async (req: RequestWithCustomProperties, res: R
 
         const userProfiles = await users.findUserPaginated(userId, userTofind, skip, take, firstRequestTime)
 
-        res.status(201).json({ users: userProfiles, status: "ok" })
+        res.status(200).json({ users: userProfiles, status: "ok" })
     }
     catch (err) {
         console.log(err)
