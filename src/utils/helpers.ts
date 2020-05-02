@@ -4,6 +4,9 @@ import {v4 as uuidv4} from 'uuid';
 import sgMail from '@sendgrid/mail'
 // const sgMail = require('@sendgrid/mail')
 import { promises as fsPromises } from 'fs';
+import { Background } from '../entity/Background';
+import { getRepository } from 'typeorm';
+import { RequestHandler } from 'express';
 const URL = process.env.URL+'/api'
 
 export const formatUser = (user: ExtendedUser) => {
@@ -34,24 +37,7 @@ export const formatUser = (user: ExtendedUser) => {
       return formatedUser
 }
 
-// export const formatTweet = (tweet: ExtendedTweet) => {
-//     return <FormatedTweet> {
-//         id: tweet.tweetId,
-//         user: tweet.userId,
-//         createdAt: Date.parse(tweet.createdAt),
-//         text: tweet.text,
-//         replyingToUserId: tweet.replyingToUserId,
-//         replyingToUserName: tweet.replyingToUserName,
-//         replyingToTweetId: tweet.replyingToTweetId,
-//         sortindex: Date.parse(tweet.createdAt),
-//         repliesCount: tweet.repliesCount,
-//         likesCount: tweet.likesCount,
-//         liked: tweet.liked
-//     }
-// }
-
 export const formatTweet = (tweet: ExtendedTweet, userId: string) => {
-    // console.log(tweet.likes, tweet.likes.map(like => like.userId), userId)
     if (tweet.deletedAt) {
         const deletedTweet: FormatedTweet = {id: tweet.tweetId, deleted: true}
         return deletedTweet
@@ -160,4 +146,20 @@ export const sanitazeFirstOrLastname = (input: string) => {
     return input
     .trim()
     .replace(/[^a-zA-Z-]/g, "")
+}
+
+
+export const getBackground:RequestHandler = async (req, res) =>{
+    try {
+        const background = await getRepository(Background)
+            .createQueryBuilder("image")
+            .take(1)
+            .getOne()
+
+        res.set('Content-Type', 'image/jpg')
+        res.status(200).send(background?.image || null)
+    }
+    catch (err) {
+        res.status(400).json({error: err, status: "error"})
+    }
 }

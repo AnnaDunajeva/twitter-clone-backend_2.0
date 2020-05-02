@@ -56,13 +56,15 @@ export const saveLikeToggle = async (req: RequestWithCustomProperties, res: Resp
         tweet[tweetId].liked = !tweet[tweetId].liked
         const oldLikesCount = tweet[tweetId].likesCount as number
         tweet[tweetId].likesCount = tweet[tweetId].liked ? oldLikesCount + 1 : oldLikesCount - 1
+        
+        res.status(201).json({message: "success", status: "ok", tweet: {...tweet}})
 
+        // ioFuncs.sendTweetUpdate(tweetId, tweet)
         //cant do that because liked is for user who liked, so all tweets who are subscribed thinkthey liked not somebody else. Same with replies
         //tweet contains data related to user that modifies it, cant just broadcast this tweet like that to everybody who subscribed to it
         //maybe i should not even manipulate with this tweet that has other user info, but make another func to get tweet that i can broadcast to many users
-                // ioFuncs.sendTweetUpdate(tweetId, tweet)
+            // - decided to just send data that was changed: ['id', 'likesCount']
         
-        res.status(201).json({message: "success", status: "ok", tweet: {...tweet}})
         ioFuncs.sendTweetUpdate(tweetId, {[tweetId]: pick(tweet[tweetId], ['id', 'likesCount'])})
     }
     catch (err) {

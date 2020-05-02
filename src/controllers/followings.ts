@@ -12,7 +12,7 @@ export const getFollowings = async (req: RequestWithCustomProperties, res: Respo
         const followingsIds = await users.getFollowingsIds(userId)
         const followingsFormated = followingsIds.length > 0 ? await users.getUsersByIds(userId, followingsIds) : {}
 
-        res.status(201).json({ users: followingsFormated, status: "ok" })
+        res.status(200).json({ users: followingsFormated, status: "ok" })
     } catch (err) {
         res.status(400).json({error: err, status: "error"})
     }
@@ -32,7 +32,7 @@ export const getUserFollowingsPaginated = async (req: RequestWithCustomPropertie
 
         const userFollowings = await users.getUserFollowingsPaginated(userId, userToGet, skip, take, firstRequestTime)
 
-        res.status(201).json({ users: userFollowings, status: "ok" })
+        res.status(200).json({ users: userFollowings, status: "ok" })
     }
     catch (err) {
         console.log(err)
@@ -56,7 +56,7 @@ export const getUserFollowersPaginated = async (req: RequestWithCustomProperties
 
         const userFollowers = await users.getUserFollowersPaginated(userId, userToGet, skip, take, firstRequestTime)
 
-        res.status(201).json({ users: userFollowers, status: "ok" })
+        res.status(200).json({ users: userFollowers, status: "ok" })
     }
     catch (err) {
         console.log(err)
@@ -71,7 +71,7 @@ export const getFollowers = async (req: RequestWithCustomProperties, res: Respon
         const followersIds = await users.getFollowersIds(userId)
         const followersFormated = followersIds.length > 0 ? await users.getUsersByIds(userId, followersIds) : {}
 
-        res.status(201).json({ users: followersFormated, status: "ok" })
+        res.status(200).json({ users: followersFormated, status: "ok" })
     } catch (err) {
         res.status(400).json({error: err, status: "error"})
     }
@@ -96,7 +96,7 @@ export const addFollowing = async (req: RequestWithCustomProperties, res: Respon
 
         const updatedUsers = await users.getUsersByIds(userId, [userId, followingId])
 
-        res.status(200).json({users: updatedUsers, status: "ok"})
+        res.status(201).json({users: updatedUsers, status: "ok"})
         ioFuncs.sendUserUpdate(userId, {[userId]: pick(updatedUsers[userId], ['userId', 'followingsCount'])})
         ioFuncs.sendUserUpdate(followingId, {[followingId]: pick(updatedUsers[followingId], ['userId', 'followersCount'])})
     }

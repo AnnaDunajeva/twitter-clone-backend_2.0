@@ -2,7 +2,7 @@ import {Router} from 'express'
 import {getTweetMedia} from '../controllers/tweets' //saveLikeToggle, getTweet, getTweetsbyId, getAllTweetsIds, 
 import {addUser, getUserAvatar, getUserBackground, getUserAvatarDefault} from '../controllers/users' //getUser, getAllUsers, updateUser, getUsersByIds, getUserTweetsPaginated, getRepliesPaginated
 import {login, verifyUserEmail, generateAndSendResetPasswordLink, resetPassword} from '../controllers/authentication'
-
+import {getBackground} from '../utils/helpers'
 
 
 const router = Router()
@@ -19,7 +19,7 @@ const router = Router()
     router.get('/user/:userId/background', getUserBackground)
     
     router.get('/user/tweet/:tweetId/media', getTweetMedia)
-    
+    router.get('/background', getBackground)
     
     router.put('/user/login', login)
 

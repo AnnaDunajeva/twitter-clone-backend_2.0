@@ -32,6 +32,15 @@ export const userTwo = {
     createdAt: () => `to_timestamp(${Date.now()/1000})`, 
     verifiedAt: () => `to_timestamp(${Date.now()/1000})`
 }
+
+export const tweetOne = { 
+    userId: userOne.userId,
+    text: 'test',
+    parentId: null,
+    media: null,
+    createdAt: () => `to_timestamp(${Date.now()/1000})`
+}
+
 export const setupDB = async () => {
     try {
         console.log("connectiong to test database...")
@@ -76,14 +85,7 @@ export const setupDB = async () => {
                 ...userTwo,
                 password: await bcrypt.hash(userTwo.password, 8)
             }])
-    
-        const tweetOne = { 
-            userId: userOne.userId,
-            text: 'test',
-            parentId: null,
-            media: null,
-            createdAt: () => `to_timestamp(${Date.now()/1000})`
-        }
+
         const insertedTweetOne = await getRepository(Tweets) 
             .insert(tweetOne)
         const insertedTweet = insertedTweetOne.generatedMaps[0]

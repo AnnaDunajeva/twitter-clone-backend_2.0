@@ -151,6 +151,9 @@ test.skip('should singup testuserthree', async () => {
     expect(responseFromVerification.body.user[testUserThree.userId]).not.toHaveProperty('password')
     expect(responseFromVerification.body.user[testUserThree.userId]).not.toHaveProperty('following')
     expect(responseFromVerification.body.user[testUserThree.userId]).not.toHaveProperty('verifiedAt')
+
+    const userInDb = await getRepository(Users).findOne({userId: testUserThree.userId})
+    expect(userInDb?.userId).toBe(testUserThree.userId)
 })
 
 

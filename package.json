@@ -33,6 +33,7 @@
    },
    "dependencies": {
       "@types/supertest": "^2.0.8",
+      "@types/validator": "^13.0.0",
       "bcrypt": "^3.0.8",
       "body-parser": "^1.19.0",
       "connect-pg-simple": "^6.1.0",
@@ -58,7 +59,7 @@
    "scripts": {
       "start": "env-cmd -f ./env/dev.env ts-node src/index.ts",
       "start:nodemon": "env-cmd -f ./env/dev.env nodemon --exec 'ts-node' src/index.ts",
-      "test": "env-cmd -f ./env/test.env jest",
+      "test": "env-cmd -f ./env/test.env jest --runInBand",
       "test:watch": "env-cmd -f ./env/test.env jest --watch"
    }
 }
