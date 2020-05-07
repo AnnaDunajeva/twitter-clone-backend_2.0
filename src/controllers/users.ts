@@ -13,7 +13,7 @@ import * as auth from '../utils/authentication'
 import { DefaultProfileImage } from "../entity/DefaultProfileImage"
 import sharp from 'sharp'
 import {omit} from 'lodash'
-import {sendEmailConfirmation, validateEmail, removeBlacklistCharsForSearch, sanitazeFirstOrLastname, sanitazeUsername} from '../utils/helpers'
+import {sendEmailConfirmation, validateEmail, removeBlacklistCharsForSearch, sanitazeFirstOrLastname, sanitazeUsername, sanitazeLocation} from '../utils/helpers'
 // import {IoFuncInterface} from '../models/ioFuncs'
 
 export const getUserProfile = async (req: RequestWithCustomProperties, res: Response) => {
@@ -24,6 +24,7 @@ export const getUserProfile = async (req: RequestWithCustomProperties, res: Resp
         res.status(200).json({user: userProfile, status: "ok"})
     }
     catch (err) {
+        console.log(err)
         res.status(400).json({error: err.message, status: "error"})
     }
 }
@@ -37,6 +38,7 @@ export const getUser = async (req: RequestWithCustomProperties, res: Response) =
         res.status(200).json({user: user, status: "ok"})
     }
     catch (err) {
+        console.log(err)
         res.status(400).json({error: err, status: "error"})
     }
 }
@@ -73,7 +75,7 @@ export const getUserAvatar = async (req: RequestWithCustomProperties, res: Respo
                 .createQueryBuilder("image")
                 .take(1)
                 .getOne()
-            console.log(avatarResponse)
+            // console.log(avatarResponse)
             avatar = avatarResponse?.image || null
         }
 
@@ -81,6 +83,7 @@ export const getUserAvatar = async (req: RequestWithCustomProperties, res: Respo
         res.status(200).send(avatar)
     }
     catch (err) {
+        console.log(err)
         res.status(400).json({error: err, status: "error"})
     }
 }
@@ -91,12 +94,13 @@ export const getUserAvatarDefault = async (req: RequestWithCustomProperties, res
             .createQueryBuilder("image")
             .take(1)
             .getOne()
-        console.log(avatarResponse)
+        // console.log(avatarResponse)
 
         res.set('Content-Type', 'image/jpg')
         res.status(200).send(avatarResponse?.image || null)
     }
     catch (err) {
+        console.log(err)
         res.status(400).json({error: err, status: "error"})
     }
 }
@@ -117,6 +121,7 @@ export const getUserBackground = async (req: RequestWithCustomProperties, res: R
         res.status(200).send(backgroundImage)
     }
     catch (err) {
+        console.log(err)
         res.status(400).json({error: err, status: "error"})
     }
 }
@@ -154,7 +159,9 @@ export const addUser: RequestHandler = async (req, res) => {
         }
         
         //TODO: check if password is strong enough
-
+        if (userId.length > 20 || firstName.length > 100 || lastName.length > 100 || email.length > 300 || password.length > 50) {
+            throw new Error('Input too long.')
+        }
         const user = { 
             userId: sanitazeUsername(userId.toLowerCase()),
             firstName: sanitazeFirstOrLastname(firstName), 
@@ -251,7 +258,7 @@ export const updateUser = async (req: RequestWithCustomProperties, res: Response
     //handels only 1 file, so avatar and background cant be updated at the same time
     try {
         const userDataToUpdate = JSON.parse(req.body.user)
-        console.log(userDataToUpdate)
+        // console.log(userDataToUpdate)
         // throw new Error('test from backend')
         const userId = req.userId as string
         const file = req.file?.buffer || null
@@ -277,19 +284,25 @@ export const updateUser = async (req: RequestWithCustomProperties, res: Response
             userDataToUpdate.avatar = await sharp(file).extract({left: Math.round(crop.x), top: Math.round(crop.y), width: Math.round(crop.width), height: Math.round(crop.height)}).resize({width: 200, height: 200}).jpeg().toBuffer()
         }
         if (userDataToUpdate.firstName) {
+            if (userDataToUpdate.firstName.length > 100) throw new Error('First name too long.')
             userDataToUpdate.firstName = sanitazeFirstOrLastname(userDataToUpdate.firstName)
         }
         if (userDataToUpdate.lastName) {
+            if (userDataToUpdate.lastName.length > 100) throw new Error('Last name too long.')
             userDataToUpdate.lastName = sanitazeFirstOrLastname(userDataToUpdate.lastName)
         }
         if (userDataToUpdate.location) {
-            userDataToUpdate.location = userDataToUpdate.location.trim()
+            if (userDataToUpdate.location.length > 100) throw new Error('Location too long.')
+            userDataToUpdate.location = sanitazeLocation(userDataToUpdate.location.trim())
         }
         if (userDataToUpdate.description) {
-            userDataToUpdate.description = userDataToUpdate.description.trim()
+            if (userDataToUpdate.description.length > 150) throw new Error('Description too long.')
+            console.log(userDataToUpdate.description)
+            userDataToUpdate.description = userDataToUpdate.description.trim().replace(/\s+/g, ' ') //replace whitespaces
+            console.log(userDataToUpdate.description)
         }
 
-        console.log(userDataToUpdate)
+        // console.log(userDataToUpdate)
 
         await users.updateUser(userId, omit(userDataToUpdate, 'crop'))
 
@@ -349,12 +362,17 @@ export const getAllUsersPaginated = async (req: RequestWithCustomProperties, res
         if (isNaN(take) || isNaN(skip) || isNaN(firstRequestTime) || take === undefined || skip === undefined || firstRequestTime === undefined) {
             throw new Error('missing pagination parameters')
         }
+        if (take > 300 || skip > 300) {
+            res.status(200).json({ users: {}, status: "ok" })
+            return
+        }
 
         const userProfiles = await users.getAllUsersPaginated(userId, skip, take, firstRequestTime)
 
         res.status(200).json({ users: userProfiles, status: "ok" })
     }
     catch (err) {
+        console.log(err)
         res.status(400).json({error: err.message, status: "error"})
     }
 }
@@ -367,8 +385,9 @@ export const findUserPaginated = async (req: RequestWithCustomProperties, res: R
         const take = parseInt(req.query.take)
         const skip = parseInt(req.query.skip)
         const firstRequestTime = parseInt(req.query.time)
-        console.log('userTofind: ', userTofind)
+        // console.log('userTofind: ', userTofind)
 
+        if (userTofind.length > 50) throw new Error('Input too long.')
         if (isNaN(take) || isNaN(skip) || isNaN(firstRequestTime) || take === undefined || skip === undefined || firstRequestTime === undefined || userId === undefined) {
             throw new Error('missing pagination parameters')
         }

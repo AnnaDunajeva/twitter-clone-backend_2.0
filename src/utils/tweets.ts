@@ -205,15 +205,15 @@ export const getTweetsAuthorDataSmall = async (tweetIds: number[]) => {
         tweetsAuthorDataSmallObj[tweet.tweetId] = {...tweet}
     })
 
-    console.log('tweetsAuthorDataSmallObj ', tweetsAuthorDataSmallObj)
+    // console.log('tweetsAuthorDataSmallObj ', tweetsAuthorDataSmallObj)
     return tweetsAuthorDataSmallObj
 }
 
-export const getPaginatedUserFeed = async (userId: string, skip: number, take: number, firstRequestTime: number, getUsers: boolean, getParents: boolean) => {
+export const getPaginatedUserFeed = async (userId: string, skip: number, take: number, firstRequestTime: number, getUsers: boolean, update: boolean) => {
     const tweetsRepo = getRepository(Tweets) 
     
     const followingsIds = await usersFunctions.getFollowingsIds(userId)
-
+    const orderBy = update ? 'ASC' : 'DESC'
     const tweets = await tweetsRepo
     .createQueryBuilder('tweets')
     .leftJoin("tweets.likes", "likes", "likes.deletedAt is null")
@@ -231,9 +231,9 @@ export const getPaginatedUserFeed = async (userId: string, skip: number, take: n
         .orWhere("tweets.userId IN (:...userIds)", { userIds: [userId, ...followingsIds] })
     }))
     .andWhere('tweets.deletedAt is null')
-    .andWhere(`tweets.createdAt < to_timestamp(${firstRequestTime/1000})`)
+    .andWhere(`tweets.createdAt ${update ? '>' : '<'} to_timestamp(${firstRequestTime/1000})`)
     .select(['tweets', 'likes.userId', 'replies.tweetId'])
-    .orderBy("tweets.createdAt", "DESC")
+    .orderBy("tweets.createdAt", orderBy)
     .printSql()
     .take(take)
     .skip(skip)
@@ -272,83 +272,85 @@ export const getPaginatedUserFeed = async (userId: string, skip: number, take: n
         const users = await usersFunctions.getUsersByIds(userId, userIds)
         response.users = users
     }
-    if (getParents) {
-        const parentTweets = parentTweetIds.length > 0 ? await getTweetsbyId(userId, parentTweetIds) : {}
-        response.parents = parentTweets
-    }
+    // if (getParents) {
+    //     const parentTweets = parentTweetIds.length > 0 ? await getTweetsbyId(userId, parentTweetIds) : {}
+    //     response.parents = parentTweets
+    // }
 
     return response
 }
 
-export const getPaginatedFeedUpdate = async (userId: string, take: number, firstRequestTime: number, getUsers: boolean) => {
+// export const getPaginatedFeedUpdate = async (userId: string, take: number, firstRequestTime: number, getUsers: boolean) => {
+//     const tweetsRepo = getRepository(Tweets) 
+    
+//     const followingsIds = await usersFunctions.getFollowingsIds(userId)
+
+//     const tweets = await tweetsRepo
+//     .createQueryBuilder('tweets')
+//     .leftJoin("tweets.likes", "likes", "likes.deletedAt is null")
+//     .leftJoin("tweets.replies", "replies", "replies.deletedAt is null")
+//     .where(new Brackets(qb => {
+//         qb.where((qb: SelectQueryBuilder<Tweets>) => {
+//             const subQuery = qb.subQuery()
+//                 .from(Tweets, "userTweets")
+//                 .select("userTweets.tweetId")
+//                 .where("userTweets.userId = :userId", {userId})
+//                 .andWhere('userTweets.deletedAt is null')
+//                 .getQuery()
+//                 return "tweets.parentId IN " + subQuery
+//         })
+//         .orWhere("tweets.userId IN (:...userIds)", { userIds: [userId, ...followingsIds] })
+//     }))
+//     .andWhere('tweets.deletedAt is null')
+//     .andWhere(`tweets.createdAt > to_timestamp(${firstRequestTime/1000})`)
+//     .select(['tweets', 'likes.userId', 'replies.tweetId'])
+//     .orderBy("tweets.createdAt", "ASC")
+//     .printSql()
+//     .take(take)
+//     .getMany()
+
+//     // console.log(tweets)
+
+//     if (tweets.length === 0) {
+//         return {
+//             tweets: {},
+//             users: {}
+//         }
+//     }
+
+//     const parentTweetIds = uniq(tweets.filter(tweet => tweet.parentId !== null).map(tweet => tweet.parentId!))
+//     const parentAuthorData = parentTweetIds.length !== 0 ?  await getTweetsAuthorDataSmall(parentTweetIds) : {}
+
+//     const tweetsWithParentAuthorData = tweets.map(tweet => {
+//         const newTweet: ExtendedTweet = {
+//             ...tweet,
+//             sortindex: Date.parse(tweet.createdAt),
+//             media: tweet.media ? true : false
+//         }
+//         if (tweet.parentId) {
+//             newTweet.parentAuthorData = parentAuthorData[tweet.parentId]
+//         }
+//         return newTweet
+//     })
+
+//     const formatedTweets = formatTweetsFromDB(tweetsWithParentAuthorData, userId)
+
+//     const response: TweetsResponse = {tweets: formatedTweets, users: {}}
+
+//     if (getUsers) {
+//         const userIds = uniq(tweets.map(tweet => tweet.userId))
+//         const users = await usersFunctions.getUsersByIds(userId, userIds)
+//         response.users = users
+//     }
+
+//     return response
+// }
+
+export const getUserTweetsPaginated = async (userId: string, skip: number, take: number, firstRequestTime: number, user: string, getUsers: boolean, getParents: boolean, update: boolean) => {
     const tweetsRepo = getRepository(Tweets) 
     
-    const followingsIds = await usersFunctions.getFollowingsIds(userId)
+    const orederBy = update ? 'ASC' : 'DESC'
 
-    const tweets = await tweetsRepo
-    .createQueryBuilder('tweets')
-    .leftJoin("tweets.likes", "likes", "likes.deletedAt is null")
-    .leftJoin("tweets.replies", "replies", "replies.deletedAt is null")
-    .where(new Brackets(qb => {
-        qb.where((qb: SelectQueryBuilder<Tweets>) => {
-            const subQuery = qb.subQuery()
-                .from(Tweets, "userTweets")
-                .select("userTweets.tweetId")
-                .where("userTweets.userId = :userId", {userId})
-                .andWhere('userTweets.deletedAt is null')
-                .getQuery()
-                return "tweets.parentId IN " + subQuery
-        })
-        .orWhere("tweets.userId IN (:...userIds)", { userIds: [userId, ...followingsIds] })
-    }))
-    .andWhere('tweets.deletedAt is null')
-    .andWhere(`tweets.createdAt > to_timestamp(${firstRequestTime/1000})`)
-    .select(['tweets', 'likes.userId', 'replies.tweetId'])
-    .orderBy("tweets.createdAt", "ASC")
-    .printSql()
-    .take(take)
-    .getMany()
-
-    // console.log(tweets)
-
-    if (tweets.length === 0) {
-        return {
-            tweets: {},
-            users: {}
-        }
-    }
-
-    const parentTweetIds = uniq(tweets.filter(tweet => tweet.parentId !== null).map(tweet => tweet.parentId!))
-    const parentAuthorData = parentTweetIds.length !== 0 ?  await getTweetsAuthorDataSmall(parentTweetIds) : {}
-
-    const tweetsWithParentAuthorData = tweets.map(tweet => {
-        const newTweet: ExtendedTweet = {
-            ...tweet,
-            sortindex: Date.parse(tweet.createdAt),
-            media: tweet.media ? true : false
-        }
-        if (tweet.parentId) {
-            newTweet.parentAuthorData = parentAuthorData[tweet.parentId]
-        }
-        return newTweet
-    })
-
-    const formatedTweets = formatTweetsFromDB(tweetsWithParentAuthorData, userId)
-
-    const response: TweetsResponse = {tweets: formatedTweets, users: {}}
-
-    if (getUsers) {
-        const userIds = uniq(tweets.map(tweet => tweet.userId))
-        const users = await usersFunctions.getUsersByIds(userId, userIds)
-        response.users = users
-    }
-
-    return response
-}
-
-export const getUserTweetsPaginated = async (userId: string, skip: number, take: number, firstRequestTime: number, user: string, getUsers: boolean, getParents: boolean) => {
-    const tweetsRepo = getRepository(Tweets) 
-    
     const tweets = await tweetsRepo
     .createQueryBuilder('tweets')
     .leftJoin("tweets.likes", "likes", "likes.deletedAt is null")
@@ -356,9 +358,9 @@ export const getUserTweetsPaginated = async (userId: string, skip: number, take:
     .where("tweets.userId = :userId", {userId: user})
     .andWhere("tweets.parentId is null")
     .andWhere('tweets.deletedAt is null')
-    .andWhere(`tweets.createdAt < to_timestamp(${firstRequestTime/1000})`)
+    .andWhere(`tweets.createdAt ${update ? '>' : '<'} to_timestamp(${firstRequestTime/1000})`)
     .select(['tweets', 'likes.userId', 'replies.tweetId'])
-    .orderBy("tweets.createdAt", "DESC")
+    .orderBy("tweets.createdAt", orederBy)
     .take(take)
     .skip(skip)
     .getMany()
@@ -401,6 +403,56 @@ export const getUserTweetsPaginated = async (userId: string, skip: number, take:
 
     return response
 }
+
+// export const getUserTweetsUpdatePaginated = async (userId: string, take: number, time: number, user: string, getUsers: boolean) => {
+//     const tweetsRepo = getRepository(Tweets) 
+
+//     const tweets = await tweetsRepo
+//     .createQueryBuilder('tweets')
+//     .leftJoin("tweets.likes", "likes", "likes.deletedAt is null")
+//     .leftJoin("tweets.replies", "replies", "replies.deletedAt is null")
+//     .where("tweets.userId = :userId", {userId: user})
+//     .andWhere("tweets.parentId is null")
+//     .andWhere('tweets.deletedAt is null')
+//     .andWhere(`tweets.createdAt > to_timestamp(${time/1000})`)
+//     .select(['tweets', 'likes.userId', 'replies.tweetId'])
+//     .orderBy("tweets.createdAt", "ASC")
+//     .take(take)
+//     .getMany()
+
+//     if (tweets.length === 0) {
+//         return {
+//             tweets: {},
+//             users: {}
+//         }
+//     }
+
+//     const parentTweetIds = uniq(tweets.filter(tweet => tweet.parentId !== null).map(tweet => tweet.parentId!))
+//     const parentAuthorData = parentTweetIds.length !== 0 ?  await getTweetsAuthorDataSmall(parentTweetIds) : {}
+
+//     const tweetsWithParentAuthorData = tweets.map(tweet => {
+//         const newTweet: ExtendedTweet = {
+//             ...tweet,
+//             sortindex: Date.parse(tweet.createdAt),
+//             media: tweet.media ? true : false
+//         }
+//         if (tweet.parentId) {
+//             newTweet.parentAuthorData = parentAuthorData[tweet.parentId]
+//         }
+//         return newTweet
+//     })
+
+//     const formatedTweets = formatTweetsFromDB(tweetsWithParentAuthorData, userId)
+
+//     const response: TweetsResponse = {tweets: formatedTweets, users: {}}
+
+//     if (getUsers) {
+//         const userIds = uniq(tweets.map(tweet => tweet.userId))
+//         const users = await usersFunctions.getUsersByIds(userId, userIds)
+//         response.users = users
+//     }
+//     return response
+// }
 
 export const getConversationPaginated = async (userId: string, skip: number, take: number, firstRequestTime: number, parentId: number, getUsers: boolean, getMainTweet: boolean) => {
     const tweetsRepo = getRepository(Tweets) 
@@ -416,7 +468,7 @@ export const getConversationPaginated = async (userId: string, skip: number, tak
 
     const parentUserId = mainTweet[parentId].user as string
     const mainTweetAuthor = mainTweet[parentId].deleted ? undefined : await usersFunctions.getUsersByIds(userId, [parentUserId])
-    console.log('main tweet author: ', mainTweetAuthor)
+    // console.log('main tweet author: ', mainTweetAuthor)
 
 
     if (!mainTweet.deleted && mainTweet[parentId].repliesCount === 0) {
@@ -481,6 +533,13 @@ export const getConversationUpdate = async (userId: string, take: number, time: 
     .orderBy("tweets.createdAt", "ASC")
     .take(take)
     .getMany()
+    
+    if (replies.length === 0) {
+        return {
+            tweets: {},
+            users: {}
+        }
+    }
 
     const parentAuthorData = await getTweetsAuthorDataSmall([parentId])
 
@@ -501,13 +560,15 @@ export const getConversationUpdate = async (userId: string, take: number, time: 
         const users = await usersFunctions.getUsersByIds(userId, userIds)
         response.users = users
     }
-    console.log('replies response ', response)
+    // console.log('replies response ', response)
     return response
 }
 
-export const getUserTweetImagesPaginates = async (userId: string, skip: number, take: number, firstRequestTime: number, user: string, getUsers: boolean, getParents: boolean) => {
+export const getUserTweetImagesPaginates = async (userId: string, skip: number, take: number, firstRequestTime: number, user: string, getUsers: boolean, getParents: boolean, update: boolean) => {
     const tweetsRepo = getRepository(Tweets) 
     
+    const orderBy = update ? 'ASC' : 'DESC'
+
     const tweets = await tweetsRepo
     .createQueryBuilder('tweets')
     .leftJoin("tweets.likes", "likes", "likes.deletedAt is null")
@@ -516,9 +577,9 @@ export const getUserTweetImagesPaginates = async (userId: string, skip: number, 
     .andWhere(`tweets.media IS NOT NULL`)
     .andWhere('tweets.parentId IS NULL')
     .andWhere('tweets.deletedAt is null')
-    .andWhere(`tweets.createdAt < to_timestamp(${firstRequestTime/1000})`)
+    .andWhere(`tweets.createdAt ${update ? '>' : '<'} to_timestamp(${firstRequestTime/1000})`)
     .select(['tweets', 'likes.userId', 'replies.tweetId'])
-    .orderBy("tweets.createdAt", "DESC")
+    .orderBy("tweets.createdAt", orderBy)
     .take(take)
     .skip(skip)
     .getMany()
@@ -561,16 +622,72 @@ export const getUserTweetImagesPaginates = async (userId: string, skip: number, 
 
     return response
 }
+// export const getUserTweetImagesUpdatePaginates = async (userId: string, take: number, firstRequestTime: number, user: string, getUsers: boolean, getParents: boolean) => {
+//     const tweetsRepo = getRepository(Tweets) 
+    
+//     const tweets = await tweetsRepo
+//     .createQueryBuilder('tweets')
+//     .leftJoin("tweets.likes", "likes", "likes.deletedAt is null")
+//     .leftJoin("tweets.replies", "replies", "replies.deletedAt is null")
+//     .where("tweets.userId = :userId", {userId: user})
+//     .andWhere(`tweets.media IS NOT NULL`)
+//     .andWhere('tweets.parentId IS NULL')
+//     .andWhere('tweets.deletedAt is null')
+//     .andWhere(`tweets.createdAt > to_timestamp(${firstRequestTime/1000})`)
+//     .select(['tweets', 'likes.userId', 'replies.tweetId'])
+//     .orderBy("tweets.createdAt", "ASC")
+//     .take(take)
+//     .getMany()
 
-export const getUserTweetLikesPaginates = async (userId: string, skip: number, take: number, firstRequestTime: number, user: string, getUsers: boolean) => {
+//     if (tweets.length === 0) {
+//         return {
+//             tweets: {},
+//             users: {}
+//         }
+//     }
+
+//     const parentTweetIds = uniq(tweets.filter(tweet => tweet.parentId !== null).map(tweet => tweet.parentId!))
+//     const parentAuthorData = parentTweetIds.length !== 0 ?  await getTweetsAuthorDataSmall(parentTweetIds) : {}
+
+//     const tweetsWithParentAuthorData = tweets.map(tweet => {
+//         const newTweet: ExtendedTweet = {
+//             ...tweet,
+//             sortindex: Date.parse(tweet.createdAt),
+//             media: tweet.media ? true : false
+//         }
+//         if (tweet.parentId) {
+//             newTweet.parentAuthorData = parentAuthorData[tweet.parentId]
+//         }
+//         return newTweet
+//     })
+
+//     const formatedTweets = formatTweetsFromDB(tweetsWithParentAuthorData, userId)
+
+//     const response: TweetsResponse = {tweets: formatedTweets, users: {}}
+
+//     if (getUsers) {
+//         const userIds = uniq(tweets.map(tweet => tweet.userId))
+//         const users = await usersFunctions.getUsersByIds(userId, userIds)
+//         response.users = users
+//     }
+//     if (getParents) {
+//         const parentTweets = parentTweetIds.length > 0 ? await getTweetsbyId(userId, parentTweetIds) : {}
+//         response.parents = parentTweets
+//     }
+
+//     return response
+// }
+
+export const getUserTweetLikesPaginates = async (userId: string, skip: number, take: number, firstRequestTime: number, user: string, getUsers: boolean, update: boolean) => {
     const likesRepo = getRepository(Likes)
+    const orderBy = update ? 'ASC' : 'DESC'
     const likes = await likesRepo
     .createQueryBuilder('likes')
     .select(['likes.tweetId', 'likes.createdAt'])
     .where('likes.userId = :userId', {userId: user})
-    .andWhere(`likes.createdAt < to_timestamp(${firstRequestTime/1000})`)
+    .andWhere(`likes.createdAt ${update ? '>' : '<'} to_timestamp(${firstRequestTime/1000})`)
     .andWhere('likes.deletedAt is null')
-    .orderBy("likes.createdAt", "DESC")
+    .orderBy("likes.createdAt", orderBy)
     .take(take)
     .skip(skip)
     .getMany()
@@ -604,10 +721,50 @@ export const getUserTweetLikesPaginates = async (userId: string, skip: number, t
 
     return response
 }
-
-export const getUserRepliesPaginated = async (userId: string, skip: number, take: number, firstRequestTime: number, user: string, getUsers: boolean) => {
-    const tweetsRepo = getRepository(Tweets) 
+// export const getUserTweetLikesUpdatePaginates = async (userId: string, take: number, time: number, user: string, getUsers: boolean) => {
+//     const likesRepo = getRepository(Likes)
+//     const likes = await likesRepo
+//     .createQueryBuilder('likes')
+//     .select(['likes.tweetId', 'likes.createdAt'])
+//     .where('likes.userId = :userId', {userId: user})
+//     .andWhere(`likes.createdAt > to_timestamp(${time/1000})`)
+//     .andWhere('likes.deletedAt is null')
+//     .orderBy("likes.createdAt", "ASC")
+//     .take(take)
+//     .getMany()
     
+//     if (likes.length === 0) {
+//         return {
+//             tweets: {},
+//             users: {}
+//         }  
+//     }
+//     const likedTweetIds = likes.map(like => like.tweetId)
+
+//     const likedTweets = await getTweetsbyIdWithoutDeleted(userId, likedTweetIds)
+//     const likedTweetIdsWithoutDeleted = Object.keys(likedTweets)
+//     if (likedTweetIdsWithoutDeleted.length === 0) {
+//         return {
+//             tweets: {},
+//             users: {}
+//         }
+//     }
+//     const likedTweetsWithSortindex = mapValues(likedTweets, (tweet)=>({...tweet, sortindex: Date.parse(likes.find((like)=>like.tweetId === tweet.id)!.createdAt)}))
+
+//     const response: TweetsResponse = {tweets: likedTweetsWithSortindex, users: {}}
+
+//     if (getUsers) {
+//         const userIds = uniq(likedTweetIdsWithoutDeleted.map(tweetId => likedTweets[tweetId].user)) as string[]
+//         const users = await usersFunctions.getUsersByIds(userId, userIds)
+//         response.users = users
+//     }
+
+//     return response 
+// }
+
+export const getUserRepliesPaginated = async (userId: string, skip: number, take: number, firstRequestTime: number, user: string, getUsers: boolean, update: boolean) => {
+    const tweetsRepo = getRepository(Tweets) 
+    const orderBy = update ? 'ASC' : 'DESC'
     const tweets = await tweetsRepo
     .createQueryBuilder('tweets')
     .leftJoin("tweets.likes", "likes", "likes.deletedAt is null") //nedd also to account for deleted likes
@@ -615,9 +772,9 @@ export const getUserRepliesPaginated = async (userId: string, skip: number, take
     .where("tweets.userId = :userId", {userId: user})
     .andWhere("tweets.parentId is not null")
     .andWhere('tweets.deletedAt is null')
-    .andWhere(`tweets.createdAt < to_timestamp(${firstRequestTime/1000})`)
+    .andWhere(`tweets.createdAt ${update ? '>' : '<'} to_timestamp(${firstRequestTime/1000})`)
     .select(['tweets', 'likes.userId', 'replies.tweetId'])
-    .orderBy("tweets.createdAt", "DESC")
+    .orderBy("tweets.createdAt", orderBy)
     .take(take)
     .skip(skip)
     .getMany()

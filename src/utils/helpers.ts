@@ -92,7 +92,7 @@ export const sendEmailConfirmation = async (to: string, token: string, url: stri
             html: email
             // html: `<p>Please confirm your email adress by clicking on the following <a href="${link}">link</a>.</p><p>If you did not request this, please ignore this email.</p> <p>Please do not reply to this email.</p>`
         };
-        console.log('about to send email confirmation')
+        // console.log('about to send email confirmation')
         await sgMail.send(msg);
     }
     catch (err) {
@@ -112,7 +112,7 @@ export const sendResetPasswordLink = async (to: string, token: string, url: stri
             subject: 'Your Twitter Clone reset password link is ready!',
             html: email
         };
-        console.log('about to send reset password email...')
+        // console.log('about to send reset password email...')
         await sgMail.send(msg);
     }
     catch (err) {
@@ -145,7 +145,21 @@ export const sanitazeUsername = (input: string) => {
 export const sanitazeFirstOrLastname = (input: string) => {
     return input
     .trim()
-    .replace(/[^a-zA-Z-]/g, "")
+    .replace(/[^a-zA-Z- ]/g, "")
+    //replace multiple spaces/whitespace with one
+    .replace(/\s\s+/g, ' ');
+}
+export const sanitazeLocation = (input: string) => {
+    return input
+    .trim()
+    .replace(/[^a-zA-Z-, ]/g, "")
+    //replace multiple spaces/whitespace with one
+    .replace(/\s\s+/g, ' ');
+}
+export const sanitazeTweet = (input: string) => {
+    return input
+    .trim()
+    .replace(/\s+/g, ' ') //replace whitespaces
 }
 
 

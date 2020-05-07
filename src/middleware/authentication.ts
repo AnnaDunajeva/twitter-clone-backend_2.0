@@ -5,8 +5,8 @@ import {RequestWithCustomProperties} from '../models/request'
 // import { Tokens } from '../entity/Tokens'
 
 export const authentication = async (req: RequestWithCustomProperties, res: Response, next: NextFunction) => {
-    console.log('req.session: ', req.session)
-    console.log('req.cookies: ', req.cookies)
+    // console.log('req.session: ', req.session)
+    // console.log('req.cookies: ', req.cookies)
     if (req.session?.userId) {
         req.userId = req.session.userId
         next()

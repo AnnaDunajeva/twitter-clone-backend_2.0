@@ -14,6 +14,7 @@ export const getFollowings = async (req: RequestWithCustomProperties, res: Respo
 
         res.status(200).json({ users: followingsFormated, status: "ok" })
     } catch (err) {
+        console.log(err)
         res.status(400).json({error: err, status: "error"})
     }
 }
@@ -42,13 +43,13 @@ export const getUserFollowingsPaginated = async (req: RequestWithCustomPropertie
 
 export const getUserFollowersPaginated = async (req: RequestWithCustomProperties, res: Response) => {
     try{
-        console.log('inside getUserFollowersPaginated')
+        // console.log('inside getUserFollowersPaginated')
         const userId = req.userId as string
         const take = parseInt(req.query.take)
         const skip = parseInt(req.query.skip)
         const firstRequestTime = parseInt(req.query.time)
         const userToGet = req.params.userId
-        console.log(take, skip, firstRequestTime, userToGet)
+        // console.log(take, skip, firstRequestTime, userToGet)
 
         if (isNaN(take) || isNaN(skip) || isNaN(firstRequestTime) || take === undefined || skip === undefined || firstRequestTime === undefined) {
             throw new Error('missing pagination parameters')
@@ -73,6 +74,7 @@ export const getFollowers = async (req: RequestWithCustomProperties, res: Respon
 
         res.status(200).json({ users: followersFormated, status: "ok" })
     } catch (err) {
+        console.log(err)
         res.status(400).json({error: err, status: "error"})
     }
 
@@ -101,6 +103,7 @@ export const addFollowing = async (req: RequestWithCustomProperties, res: Respon
         ioFuncs.sendUserUpdate(followingId, {[followingId]: pick(updatedUsers[followingId], ['userId', 'followersCount'])})
     }
     catch(err) {
+        console.log(err)
         res.status(400).json({error: err, status: "error"})
     }
 }
@@ -121,6 +124,7 @@ export const deleteFollowing = async (req: RequestWithCustomProperties, res: Res
         // res.status(200).json({user: userProfile})
     }
     catch(err) {
+        console.log(err)
         res.status(400).json({error: err, status: "error"})
     }
 }

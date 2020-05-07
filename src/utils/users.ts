@@ -1,4 +1,4 @@
-import {getRepository} from "typeorm"
+import {getRepository, SelectQueryBuilder} from "typeorm"
 import {Users} from "../entity/Users"
 import {Followings} from '../entity/Followings'
 import {FormatedUser, UpdateUserData, ExtendedUser, UsersInterface} from '../models/users'
@@ -17,7 +17,7 @@ export const getUserProfile = async (userId: string) => {
     // .addSelect('extract(epoch from users.createdAt)', 'createdAt') //in sec, ??is it number or string?
     //.addSelect('COUNT(followings.followingId)', 'followingsCount') //weird error, dont know how to solve
     .getOne()
-    console.log(userFromDB)
+    // console.log(userFromDB)
 
     if(!userFromDB) {
         return {}
@@ -48,7 +48,7 @@ export const getUnverifiedUserProfile = async (userId: string) => {
     // .addSelect('extract(epoch from users.createdAt)', 'createdAt') //in sec, ??is it number or string?
     //.addSelect('COUNT(followings.followingId)', 'followingsCount') //weird error, dont know how to solve
     .getOne()
-    console.log(userFromDB)
+    // console.log(userFromDB)
 
     if(!userFromDB) {
         return {}
@@ -225,7 +225,7 @@ export const getUserFollowersPaginated = async (authedUser: string, userId: stri
 export const getUsersByIds = async (authedUser: string, ids: string[]) => {
     // const ids = receivedIds.filter(id => id !== authedUser)
     const usersRepo = getRepository(Users)
-    console.log('inside getUsersByIds, ids: ', ids)
+    // console.log('inside getUsersByIds, ids: ', ids)
     const idsWithoutAuthedUser = ids.filter(id => id !== authedUser)
     if (ids.length !== 0) {
         const formatedUsers: UsersInterface = {};
@@ -267,7 +267,7 @@ export const getUsersByIds = async (authedUser: string, ids: string[]) => {
 }
 
 export const updateUser = async (userId: string, dataToUpdate: UpdateUserData) => {
-    console.log(dataToUpdate)
+    // console.log(dataToUpdate)
     const usersRepo = getRepository(Users)
     await usersRepo
     .createQueryBuilder('users')
@@ -288,16 +288,54 @@ export const deleteFollowing = async (userId: string, followingId: string) => {
 
 export const getAllUsersPaginated = async (authedUser: string, skip: number, take: number, firstRequestTime: number) => {
     const usersRepo = getRepository(Users)
+    //TODO: sort by most followed users and dont show users whom authedUser is following
+
     const users  = await usersRepo
     .createQueryBuilder("users")
     .leftJoin("users.followings", "followings")
-    .select(['followings.followingId', 'users.userId','users.firstName', 'users.lastName','users.createdAt', 'users.avatar', 'users.backgroundColor', 'users.backgroundImage','users.description', 'users.location']) 
+    .leftJoin('users.followers', 'followers')
+    // .select(['followers.userId','followings.followingId', 'users.userId','users.firstName', 
+    //'users.lastName','users.createdAt', 'users.avatar', 'users.backgroundColor', 'users.backgroundImage',
+    //'users.description', 'users.location']) 
+    .select('users.userId', 'userId') 
+    .addSelect('users.firstName', 'firstName')
+    .addSelect('users.lastName', 'lastName')
+    .addSelect('users.createdAt', 'createdAt')
+    .addSelect('users.avatar', 'avatar')
+    .addSelect('users.backgroundColor', 'backgroundColor')
+    .addSelect('users.backgroundImage', 'backgroundImage')
+    .addSelect('users.description', 'description')
+    .addSelect('users.location', 'location')
+    .addSelect('count(distinct "followings"."followingId")', 'followingsCount')
+    .addSelect('count(distinct "followers"."userId")', 'followersCount')
+    .addSelect('array_agg(distinct "followers"."userId")', 'followersIds')
     .where("users.userId <> :id", { id: authedUser })
-    .andWhere(`users.createdAt < to_timestamp(${firstRequestTime/1000})`) //doesnt work
+    .andWhere(`users.createdAt < to_timestamp(${firstRequestTime/1000})`) 
     .andWhere("users.verifiedAt is not null")
+    .andWhere((qb:SelectQueryBuilder<Users>) => {
+        const subQuery = qb.subQuery()
+        .from(Followings, "followingsTable")
+        .select("followingsTable.followingId")
+        .where("followingsTable.userId = :userId", {userId: authedUser})
+        .andWhere('followingsTable.deletedAt is null')
+        .getQuery()
+        return "users.userId not IN " + subQuery
+    })
     .take(take)
     .skip(skip)
-    .getMany()
+    .groupBy('users.userId')
+    .addGroupBy('users.firstName')
+    .addGroupBy('users.lastName')
+    .addGroupBy('users.createdAt')
+    .addGroupBy('users.avatar')
+    .addGroupBy('users.backgroundColor')
+    .addGroupBy('users.backgroundImage')
+    .addGroupBy('users.description')
+    .addGroupBy('users.location')
+    .orderBy('count(distinct "followers"."userId")', 'DESC')
+    .getRawMany()
+    
+    console.log(users)
 
     if(users.length === 0) {
         return {}
@@ -305,22 +343,34 @@ export const getAllUsersPaginated = async (authedUser: string, skip: number, tak
 
     const formatedUsers: UsersInterface = {};
 
-    for (let userFromDB of users) {
-        const user = { 
+    // for (let userFromDB of users) {
+    //     const user = { 
+    //         ...userFromDB,
+    //         avatar: userFromDB.avatar ? true : false,
+    //         backgroundImage: userFromDB.backgroundImage ? true : false
+    //     } as ExtendedUser
+    //     const followersIds: string[] = await getFollowersIds(userFromDB.userId)
+
+    //     user.followersCount = followersIds.length
+    //     user.followingsCount = userFromDB.followings.length
+    //     user.sortindex = Date.parse(userFromDB.createdAt)
+    //     user.following = followersIds.includes(authedUser)
+
+    //     formatedUsers[userFromDB.userId] = formatUser(user)
+    // }
+    users.map((userFromDB, index) => {
+        const user: ExtendedUser = { 
             ...userFromDB,
+            followersCount: parseInt(userFromDB.followersCount),
+            followingsCount: parseInt(userFromDB.followingsCount),
             avatar: userFromDB.avatar ? true : false,
             backgroundImage: userFromDB.backgroundImage ? true : false
-        } as ExtendedUser
-        const followersIds: string[] = await getFollowersIds(userFromDB.userId)
-        //const followingsIds = userFromDB.followings.map(following => following.followingId)
-
-        user.followersCount = followersIds.length
-        user.followingsCount = userFromDB.followings.length
-        user.sortindex = Date.parse(userFromDB.createdAt)
-        user.following = followersIds.includes(authedUser)
+        }
+        user.sortindex = index
+        user.following = userFromDB.followersIds.includes(authedUser)
 
         formatedUsers[userFromDB.userId] = formatUser(user)
-    }
+    })
 
     //we need sortindex and following properties here (which for now is just createAt in unix)
 
@@ -380,7 +430,7 @@ export const findUserPaginated = async (authedUser: string, userToFind: string, 
     .skip(skip)
     .getMany()
 
-    console.log(users)
+    // console.log(users)
 
     if(users.length === 0) {
         return {}

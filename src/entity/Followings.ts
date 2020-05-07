@@ -20,7 +20,10 @@ export class Followings {
     @JoinColumn({name: 'userId'})
     user!: string;
 
-    @ManyToOne(() => Users)
+    // @ManyToOne(() => Users, users => users.followers)
+    // user!: string;
+
+    @ManyToOne(() => Users, users => users.followers)
     @JoinColumn({name: 'followingId'})
     following!: string;
 

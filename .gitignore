@@ -6,4 +6,7 @@ temp/
 dist/
 env/
 ormconfig.json
-ormconfig2.json
+assets/insertBackgroundToDb.js
+assets/insertBackgroundToDb.ts
+.dockerignore
+Dockerfile

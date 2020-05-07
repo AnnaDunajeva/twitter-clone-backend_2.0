@@ -52,6 +52,13 @@ export class Users {
     tokens!: Tokens[];
 
     @OneToMany(() => Followings, following => following.user) 
-    followings!: Followings[];   
+    followings!: Followings[];  
+
+    followingsCount!: number;
+    
+    @OneToMany(() => Followings, follower => follower.following) 
+    followers!: Followings[];   
+
+    followersCount!: number;
 
 }

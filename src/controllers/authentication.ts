@@ -94,9 +94,9 @@ export const verifyUserEmail = async (req: RequestWithCustomProperties, res: Res
         req.session!.userId = user.userId
         res.cookie(process.env.USER_COOKIE_ID || 'id', user.userId, {
             maxAge: parseInt(process.env.SESSION_LIFETIME || '3600000'),
-            sameSite: true,
+            sameSite: 'none', //smasite true does not allow to acces cookie in firefox
             httpOnly: false, 
-            secure: false //should be true in production
+            secure: process.env.ENV === 'production' ? true : false //should be true in production
         })
     
         const userProfile = await users.getUserProfile(user.userId)
@@ -149,6 +149,7 @@ export const login: RequestHandler = async (req, res) => {
         const usersRepo = getRepository(Users)
         const user  = await usersRepo.findOne({userId})//if i use select options, then if userId is undefined, it wont return first value in column but returns undefined
         //this is unreliable, should rewrite it probably
+        if(userId.length > 30 || password.length > 50) throw new Error('Input too long.')
 
         if (user && !user.verifiedAt) {
             //? chekck token, if expired delete account if it was created more that 24h ago? if yes, delete account
@@ -170,9 +171,9 @@ export const login: RequestHandler = async (req, res) => {
         //add userId cookie
         res.cookie(process.env.USER_COOKIE_ID || 'id', user.userId, {
             maxAge: parseInt(process.env.SESSION_LIFETIME || '3600000'),
-            sameSite: true,
+            sameSite: 'none',
             httpOnly: false, 
-            secure: false //should be true in production
+            secure: process.env.ENV === 'production' ? true : false //should be true in production
         })
 
         const userProfile = await users.getUserProfile(userId)
@@ -211,6 +212,7 @@ export const logout = async (req: RequestWithCustomProperties, res: Response) =>
         res.status(200).json({message: "success", status: "ok"})
     }
     catch(err) {
+        console.log(err)
         res.status(500).json({error: err.message, status: "error"})
     }
 }
@@ -233,7 +235,7 @@ export const generateAndSendResetPasswordLink = async (req: RequestWithCustomPro
         const email = req.body.email
         const usersRepo = getRepository(Users)
         const user  = await usersRepo.findOne({email})
-
+        if (email.length > 300) throw new Error('Input too long.')
         if (user && !user.verifiedAt) {
             //? chekck token, if expired delete account if it was created more that 24h ago?
             await auth.checkAndDeleteExpiredUnverifiedAccount(user)            
@@ -260,6 +262,8 @@ export const resetPassword = async (req: RequestWithCustomProperties, res: Respo
     try {
         const resetPasswordToken = req.body.token
         const password = req.body.password
+
+        if(password.length > 50) throw new Error('Input too long.')
 
         const ResetPasswordTokensRepo = getRepository(ResetPasswordTokens)
         

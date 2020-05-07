@@ -9,6 +9,22 @@ import session from 'express-session'
 import pgSessionStore from 'connect-pg-simple'
 // import cookieParser from "cookie-parser";
 import csurf from 'csurf'
+import pg from 'pg';
+
+
+const pgConfig: any = {
+  max: 1,
+  user: process.env.DB_USERNAME,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  host: process.env.DB_HOST
+};
+
+if (process.env.ENV !== 'production') {
+  pgConfig.port = process.env.DB_PORT;
+}
+
+
 
 const app = express()
 
@@ -34,10 +50,16 @@ app.use(json())
 //    next() ;
 //  } ) ;
 
+// const pgConString = process.env.ENV ==='production'
+//     ? `postgresql://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@localhost:5432/${process.env.DB_NAME}?host=${process.env.DB_HOST}`
+//     : `postgresql://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`
+// console.log(`pgConString=${pgConString}`)
 //export it so that i can close it in tests
 export const sessionStoreDbConnection = new (pgSessionStore(session))({
-    conString: `postgresql://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`
+    pool : new pg.Pool(pgConfig)
 })
+//If you have your node.js behind a proxy and are using cookie secure: true, you need to set "trust proxy" in express
+if (process.env.ENV === 'production') app.set('trust proxy', 1)
 
 app.use(session({
     name: process.env.SESSION_NAME || 'sid',
@@ -49,7 +71,7 @@ app.use(session({
         maxAge: parseInt(process.env.SESSION_LIFETIME || '3600000'),
         sameSite: true,
         httpOnly: true, 
-        secure: false //should be true in production
+        secure: process.env.ENV === 'production' ? true : false //should be true in production
     }
 }))
 
@@ -57,8 +79,12 @@ app.use('/', routesWithoutAuth)
 
 const csrfProtection = csurf()
 app.use(csrfProtection)
+
 app.use(function (req, res, next) { //new token on each request BREACH attack protection
-    res.cookie(process.env.CSRF_COOKIE_KEY || 'XSRF-TOKEN', req.csrfToken())
+    res.cookie(process.env.CSRF_COOKIE_KEY || 'XSRF-TOKEN', req.csrfToken(), {
+      sameSite: 'none', //samesite true does not allow to access cookie in firefox
+      secure: process.env.ENV === 'production' ? true : false
+    })
     next()
 })
 

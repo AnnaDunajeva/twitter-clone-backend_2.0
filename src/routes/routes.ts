@@ -3,7 +3,6 @@ import multer, { FileFilterCallback } from 'multer'
 //import path from 'path'
 import {
     getPaginatedFeed, 
-    getPaginatedFeedUpdate, 
     saveTweet, 
     getConversationPaginated, 
     getUserTweetsPaginated, 
@@ -88,7 +87,7 @@ export const createRouter = (io: SocketIO.Server) => {
     router.get('/users/find/:userId', authentication, findUserPaginated)
 
     router.get('/user/feed',authentication, getPaginatedFeed)
-    router.get('/user/feed/update', authentication, getPaginatedFeedUpdate)
+    // router.get('/user/feed/update', authentication, getPaginatedFeedUpdate)
 
     router.get('/user/tweets/:tweetId/conversation', authentication, getConversationPaginated)
     router.get('/tweet/:tweetId/likes', authentication, getTweetLikesPaginated)
