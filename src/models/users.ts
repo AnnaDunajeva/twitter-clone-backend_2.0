@@ -40,6 +40,7 @@ export interface UsersInterface {
 }
 
 export interface UpdateUserData {
+    userId?: string;
     firstName?: string;
     lastName?: string;
     avatar?: Buffer | null;
@@ -50,6 +51,12 @@ export interface UpdateUserData {
     email?: string;
     password?: string;
     verifiedAt?: () => string;
+    crop?: {
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+    }
 }
 
 export interface smallAuthor {

@@ -1,64 +1,24 @@
-import {getRepository} from "typeorm"
-import {Tweets} from "../entity/Tweets"
-import {Likes} from '../entity/Likes'
-import {Response} from 'express' //RequestHandler
-// import uuidv4 from 'uuid/v4'
-// import {TweetsInterface} from '../models/tweets'
-// import {formatTweet} from '../utils/helpers'
-import {RequestWithCustomProperties} from '../models/request'
-//import {TweetsResponse} from '../models/reponses'
+import { getRepository } from "typeorm"
+import { Tweets } from "../entity/Tweets"
+import { Response } from 'express'
+import { RequestWithCustomProperties } from '../models/request'
 import * as tweetsFunc from '../utils/tweets'
-import { ExtendedTweet, TweetsInterface } from "../models/tweets"
-//import * as userFunc from '../utils/users'
-import sharp from 'sharp'
-import {IoFuncInterface} from '../models/ioFuncs'
-import {pick} from 'lodash'
-import {sanitazeTweet} from '../utils/helpers'
+import { TweetsInterface } from "../models/tweets"
+import { IoFuncInterface } from '../models/ioFuncs'
+import { pick } from 'lodash'
 
 export const saveLikeToggle = async (req: RequestWithCustomProperties, res: Response, ioFuncs: IoFuncInterface) => {
     try {
-        // const {hasLiked} = req.body as {hasLiked: boolean}
         const userId = req.userId as string
-        // console.log(userId)
         const tweetId = parseInt(req.params.tweetId)
 
-        const tweet = await tweetsFunc.getTweetsbyId(userId, [tweetId])
-        if (tweet[tweetId].deleted) {
-            throw new Error('Could not add like for deleted tweet.')
+        if (!tweetId) {
+            throw new Error('Invalid rewuest')
         }
-        const createdAt = Date.now()
 
-        if (!tweet[tweetId].liked) {
-            const like = { 
-                userId: userId.toLowerCase(),
-                tweetId,
-                createdAt: () => `to_timestamp(${createdAt/1000})` //postgres func to_timestamp accepts unix time in sec
-            }
-            await getRepository(Likes) 
-            .createQueryBuilder('likes')
-            .insert()
-            .values(like)
-            .execute();
-            // const like  = new Likes()
-            // like.userId = userId
-            // like.tweetId = tweetId
-            // like.createdAt = `to_timestamp(${Date.now()/1000})` //postgres func to_timestamp accepts unix time in sec
-            // await getRepository(Likes).save(like)
-                
-        } else {
-            await getRepository(Likes)
-            .createQueryBuilder('likes')
-            .delete()
-            .where("userId = :userId", { userId })
-            .andWhere('tweetId = :tweetId', { tweetId })
-            .execute();
-        } 
-
-        tweet[tweetId].liked = !tweet[tweetId].liked
-        const oldLikesCount = tweet[tweetId].likesCount as number
-        tweet[tweetId].likesCount = tweet[tweetId].liked ? oldLikesCount + 1 : oldLikesCount - 1
+        const tweet = await tweetsFunc.toggleTweetLike(userId, tweetId)
         
-        res.status(201).json({message: "success", status: "ok", tweet: {...tweet}})
+        res.status(200).json({message: "success", status: "ok", tweet: {...tweet}})
 
         // ioFuncs.sendTweetUpdate(tweetId, tweet)
         //cant do that because liked is for user who liked, so all tweets who are subscribed thinkthey liked not somebody else. Same with replies
@@ -67,7 +27,7 @@ export const saveLikeToggle = async (req: RequestWithCustomProperties, res: Resp
             // - decided to just send data that was changed: ['id', 'likesCount']
         
         ioFuncs.sendTweetUpdate(tweetId, {[tweetId]: pick(tweet[tweetId], ['id', 'likesCount'])})
-        //proble: if user has his account open in two different windows and toggles like from one, in the other window liked status
+        //problem: if user has his account open in two different windows and toggles like from one, in the other window liked status
         //wont get updated despite count being updated
     }
     catch (err) {
@@ -79,66 +39,39 @@ export const saveLikeToggle = async (req: RequestWithCustomProperties, res: Resp
 export const saveTweet = async (req: RequestWithCustomProperties, res: Response, ioFuncs: IoFuncInterface) => {
     try {
         const data = JSON.parse(req.body.tweet)
-        // console.log(data)
         const userId = req.userId as string
         const file = req.file?.buffer || null
+
+        if (Object.keys(data).length === 0 && !file) {
+            throw new Error('Invalid request')
+        }
         
         if (file && !data.crop) {
             throw new Error('Crop options not specified.')
         }
         let parentTweet: TweetsInterface | null = null
         if (data.replyingTo) {
+            data.replyingTo = parseInt(data.replyingTo) //making sure its number
             parentTweet = await tweetsFunc.getTweetsbyId(userId, [data.replyingTo])
             if (parentTweet[data.replyingTo].deleted) {
                 throw new Error('Could not leave reply for deleted tweet.')
             }
         }
+        const newFormatedTweet = await tweetsFunc.saveTweet(userId, data.text, data.replyingTo, file, data.crop)
 
-        const createdAt = Date.now()
-
-        const tweet = { 
-            userId: userId.toLowerCase(),
-            text: data.text ? sanitazeTweet(data.text) : '',
-            parentId: data.replyingTo ? data.replyingTo : null,
-            media: file ? await sharp(file).extract({left: Math.round(data.crop.x), top: Math.round(data.crop.y), width: Math.round(data.crop.width), height: Math.round(data.crop.height)}).resize({width: 700, height: 700}).jpeg().toBuffer() : null,
-            createdAt: () => `to_timestamp(${createdAt/1000})` //postgres func to_timestamp accepts unix time in sec
-        }
-
-        if(tweet.text.length > 300) throw new Error('Input too long.')
-    
-        const insertedResult = await getRepository(Tweets) 
-            .createQueryBuilder('tweets')
-            .insert()
-            .values(tweet)
-            .returning(['tweetId', 'userId','text', 'createdAt', 'parentId', 'media'])
-            .execute();
-
-        //not a good idea cause i add a lot of stuff to tweet like repleyngToUserId and stuff, pain in the ass to do it manualltyhere
-        const insertedTweetRaw = insertedResult.generatedMaps[0] as ExtendedTweet
-        // insertedTweetRaw.replies = []
-        // insertedTweetRaw.likes = []
-        // insertedTweetRaw.media = insertedTweetRaw.media ? true : false
-
-        // console.log(tweetFromDB)
-
-        const newFormatedTweet =  await tweetsFunc.getTweetsbyId(userId, [insertedTweetRaw.tweetId])
-
-        res.status(201).json({
+        res.status(200).json({
             tweet: newFormatedTweet,
             status: "ok"
         })
 
         if (parentTweet) {
-            // const parentAuthorData = await tweetsFunc.getTweetsAuthorDataSmall([tweetFromDB.parentId!])
-            // tweetFromDB.parentAuthorData = parentAuthorData[tweetFromDB.parentId!]
-            // const parentTweet = await tweetsFunc.getTweetsbyIdWithoutDeleted(userId, [tweet.parentId]) //we checked before that parent is not deleted
             const updatedParentTweet = {
-                [tweet.parentId]: {
-                    id: parentTweet[tweet.parentId].id,
-                    repliesCount: parentTweet[tweet.parentId].repliesCount! + 1
+                [data.replyingTo]: {
+                    id: parentTweet[data.replyingTo].id,
+                    repliesCount: parentTweet[data.replyingTo].repliesCount! + 1
                 }
             }
-            ioFuncs.sendTweetUpdate(tweet.parentId, updatedParentTweet)
+            ioFuncs.sendTweetUpdate(data.replyingTo, updatedParentTweet)
         }
 
     } catch (err) {
@@ -151,6 +84,10 @@ export const getTweetMedia = async (req: RequestWithCustomProperties, res: Respo
     try {
         const tweetId = parseInt(req.params.tweetId)
 
+        if(!tweetId) {
+            throw new Error('Invalid request')
+        }
+
         const tweetsRepo = getRepository(Tweets)
         const tweet = await tweetsRepo.findOne({tweetId})
         if (!tweet) {
@@ -160,90 +97,13 @@ export const getTweetMedia = async (req: RequestWithCustomProperties, res: Respo
         let tweetImage = tweet.media
 
         res.set('Content-Type', 'image/jpeg')
-        res.status(201).send(tweetImage)
+        res.status(200).send(tweetImage)
     }
     catch (err) {
         console.log(err)
         res.status(400).json({error: err, status: "error"})
     }
 }
-// export const getAllTweets = async (req: RequestWithCustomProperties, res: Response) => { //implementation using relations
-//     try {
-//         const userId = req.userId as string
-//         const tweetIds = await tweets.getAllTweetIds(userId)
-        
-//         const formatedTweets = tweetIds.length > 0 ? await tweets.getTweetsbyId(tweetIds) : {}
-
-//         res.status(201).json({ tweets: formatedTweets })
-//     } catch (err) {
-//         res.status(500).json({error: err})
-//     }
-// }
-
-// export const getTweet: RequestHandler = async (req, res) => {
-//     try {
-//         const tweetId = req.params.tweetId
-//         const getParents = req.query.getParents === 'true' ? true : false
-//         const getUsers = req.query.getUsers === 'true' ? true : false
-
-//         const tweetResponse = await tweets.getTweetsByIdWithOptionalParameters([tweetId], getUsers, getParents)
-
-//         // const tweet = await tweets.getTweetsbyId([tweetId])
-
-//         // const response: TweetsResponse = {tweets: tweet}
-
-//         // if (getParent) {
-//         //     const parentId = tweet[tweetId].replyingTo
-//         //     const parent = parentId ? await tweets.getTweetsbyId([parentId]) : {}
-//         //     response.parents = parent
-//         // } 
-//         // if (getUser) {
-//         //     const userId = tweet[tweetId].author
-//         //     const user = await userFunc.getUsersByIds([userId])
-//         //     response.users = user
-//         // }
-//         res.status(201).json(tweetResponse)
-//     }
-//     catch (err) {
-//         res.status(500).json({error: err})
-//     }
-// }
-
-// export const getUsertweets = async (req: RequestWithCustomProperties, res: Response) => {
-//     try {
-//         // const userId = req.userId as string
-//         const userId = req.params.userId
-//         const userTweetIds = await tweets.getUserTweetIds(userId)
-//         const userTweets = await tweets.getTweetsbyId(userTweetIds)
-
-//         res.status(201).json({ tweets: userTweets })
-//     } catch (err) {
-//         res.status(500).json({error: err})
-//     }
-// }
-
-// export const getTweetsbyId = async (req: RequestWithCustomProperties, res: Response) => { //implementation using relations
-//     try {
-//         const tweetIds = req.body.tweets as string[]
-//         console.log(tweetIds)
-//         const formatedTweets = tweetIds.length > 0 ? await tweets.getTweetsbyId(tweetIds) : {}
-
-//         res.status(201).json({ tweets: formatedTweets })
-//     } catch (err) {
-//         res.status(500).json({error: err})
-//     }
-// }
-
-// export const getAllTweetsIds = async (req: RequestWithCustomProperties, res: Response) => {
-//     try {
-//         const userId = req.userId as string
-//         const tweetIds = await tweets.getAllTweetIds(userId)
-        
-//         res.status(201).json({ tweets: tweetIds })
-//     } catch (err) {
-//         res.status(500).json({error: err})
-//     }
-// }
 
 export const getPaginatedFeed = async (req: RequestWithCustomProperties, res: Response) => {
     try{
@@ -254,42 +114,19 @@ export const getPaginatedFeed = async (req: RequestWithCustomProperties, res: Re
         const getUsers = req.query.getUsers === 'true' ? true : false
         const firstRequestTime = parseInt(req.query.time)
         const update = req.query.update === 'true' ? true : false
-        // console.log(skip, take, firstRequestTime)
 
         if (isNaN(take) || isNaN(skip) || isNaN(firstRequestTime) || take === undefined || skip === undefined || firstRequestTime === undefined) {
             throw new Error('missing pagination parameters')
         }
 
         const userFeed = await tweetsFunc.getPaginatedUserFeed(userId, skip, take, firstRequestTime, getUsers, update) //{tweets: {...}, users?: {...}}
-        res.status(201).json({...userFeed, status: "ok"})
+        res.status(200).json({...userFeed, status: "ok"})
     }
     catch(err) {
         console.log(err)
-        res.status(500).json({error: err.message, status: "error"})
+        res.status(400).json({error: err.message, status: "error"})
     }
 }
-
-// export const getPaginatedFeedUpdate = async (req: RequestWithCustomProperties, res: Response) => {
-//     try{
-//         const userId = req.userId as string
-
-//         const take = parseInt(req.query.take)
-//         const getUsers = req.query.getUsers === 'true' ? true : false
-//         const firstRequestTime = parseInt(req.query.time)
-//         // console.log(take, firstRequestTime)
-
-//         if (isNaN(take) || isNaN(firstRequestTime) || take === undefined || firstRequestTime === undefined) {
-//             throw new Error('missing pagination parameters')
-//         }
-
-//         const userFeed = await tweetsFunc.getPaginatedFeedUpdate(userId, take, firstRequestTime, getUsers) //{tweets: {...}, users?: {...}, parents?: {...}}
-//         res.status(201).json({...userFeed, status: "ok"})
-//     }
-//     catch(err) {
-//         console.log(err)
-//         res.status(500).json({error: err.message, status: "error"})
-//     }
-// }
 
 export const getUserTweetsPaginated = async (req: RequestWithCustomProperties, res: Response) => {
     try{
@@ -307,34 +144,13 @@ export const getUserTweetsPaginated = async (req: RequestWithCustomProperties, r
         }
 
         const userTweets = await tweetsFunc.getUserTweetsPaginated(userId, skip, take, firstRequestTime, user, getUsers, getParents, update)
-        res.status(201).json({...userTweets, status: "ok"})
+        res.status(200).json({...userTweets, status: "ok"})
     }
     catch(err) {
         console.log(err)
-        res.status(500).json({error: err.message, status: "error"})
+        res.status(400).json({error: err.message, status: "error"})
     }
 }
-
-// export const getUserTweetsUpdatePaginated = async (req: RequestWithCustomProperties, res: Response) => {
-//     try{
-//         const userId = req.userId as string
-//         const user = req.params.userId
-//         const take = parseInt(req.query.take)
-//         const getUsers = req.query.getUsers === 'true' ? true : false
-//         const time = parseInt(req.query.time)
-
-//         if (isNaN(take) || isNaN(time) || take === undefined || time === undefined) {
-//             throw new Error('missing pagination parameters')
-//         }
-
-//         const response = await tweetsFunc.getUserTweetsUpdatePaginated(userId, take, time, user, getUsers)
-//         res.status(201).json({...response, status: "ok"})
-//     }
-//     catch(err) {
-//         console.log(err)
-//         res.status(500).json({error: err.message, status: "error"})
-//     }
-// }
 
 export const getConversationPaginated = async (req: RequestWithCustomProperties, res: Response) => {
     try{
@@ -346,18 +162,17 @@ export const getConversationPaginated = async (req: RequestWithCustomProperties,
         const take = parseInt(req.query.take)
         const skip = parseInt(req.query.skip)
         const firstRequestTime = parseInt(req.query.time)
-        // console.log(skip, take, firstRequestTime)
 
         if (isNaN(take) || isNaN(skip) || isNaN(firstRequestTime) || take === undefined || skip === undefined || firstRequestTime === undefined) {
             throw new Error('missing pagination parameters')
         }
 
         const response = await tweetsFunc.getConversationPaginated(userId, skip, take, firstRequestTime, parentId, getUsers, getMainTweet)
-        res.status(201).json({...response, status: "ok"})
+        res.status(200).json({...response, status: "ok"})
     }
     catch(err) {
         console.log(err)
-        res.status(500).json({error: err.message, status: "error"})
+        res.status(400).json({error: err.message, status: "error"})
     }
 }
 
@@ -375,17 +190,16 @@ export const getConversationUpdate = async (req: RequestWithCustomProperties, re
         }
 
         const response = await tweetsFunc.getConversationUpdate(userId, take, time, parentId, getUsers)
-        res.status(201).json({...response, status: "ok"})
+        res.status(200).json({...response, status: "ok"})
     }
     catch(err) {
         console.log(err)
-        res.status(500).json({error: err.message, status: "error"})
+        res.status(400).json({error: err.message, status: "error"})
     }
 }
 
 export const getUserTweetImagesPaginates = async (req: RequestWithCustomProperties, res: Response) => {
     try{
-        // console.log('inside getUserTweetImagesPaginates')
         const userId = req.userId as string
         const user = req.params.userId
         const take = parseInt(req.query.take)
@@ -394,41 +208,19 @@ export const getUserTweetImagesPaginates = async (req: RequestWithCustomProperti
         const getParents = req.query.getParents === 'true' ? true : false
         const firstRequestTime = parseInt(req.query.time)
         const update = req.query.update === 'true' ? true : false
-        // console.log(take, skip, firstRequestTime)
 
         if (isNaN(take) || isNaN(skip) || isNaN(firstRequestTime) || take === undefined || skip === undefined || firstRequestTime === undefined) {
             throw new Error('missing pagination parameters')
         }
 
         const userTweets = await tweetsFunc.getUserTweetImagesPaginates(userId,skip, take, firstRequestTime, user, getUsers, getParents, update)
-        res.status(201).json({...userTweets, status: "ok"})
+        res.status(200).json({...userTweets, status: "ok"})
     }
     catch(err) {
         console.log(err)
-        res.status(500).json({error: err.message, status: "error"})
+        res.status(400).json({error: err.message, status: "error"})
     }
 }
-
-// export const getUserTweetImagesUpdatePaginates = async (req: RequestWithCustomProperties, res: Response) => {
-//     try{
-//         const userId = req.userId as string
-//         const user = req.params.userId
-//         const take = parseInt(req.query.take)
-//         const getUsers = req.query.getUsers === 'true' ? true : false
-//         const time = parseInt(req.query.time)
-
-//         if (isNaN(take) || isNaN(time) || take === undefined || time === undefined) {
-//             throw new Error('missing pagination parameters')
-//         }
-
-//         const response = await tweetsFunc.getUserTweetImagesUpdatePaginates(userId, take, time, user, getUsers)
-//         res.status(201).json({...response, status: "ok"})
-//     }
-//     catch(err) {
-//         console.log(err)
-//         res.status(500).json({error: err.message, status: "error"})
-//     }
-// }
 
 export const getUserTweetLikesPaginates = async (req: RequestWithCustomProperties, res: Response) => {
     try{
@@ -439,40 +231,20 @@ export const getUserTweetLikesPaginates = async (req: RequestWithCustomPropertie
         const getUsers = req.query.getUsers === 'true' ? true : false
         const firstRequestTime = parseInt(req.query.time)
         const update = req.query.update === 'true' ? true : false
-        // console.log(take, skip, firstRequestTime)
 
         if (isNaN(take) || isNaN(skip) || isNaN(firstRequestTime) || take === undefined || skip === undefined || firstRequestTime === undefined) {
             throw new Error('missing pagination parameters')
         }
 
         const userTweets = await tweetsFunc.getUserTweetLikesPaginates(userId,skip, take, firstRequestTime, user, getUsers, update)
-        res.status(201).json({...userTweets, status: "ok"})
+        res.status(200).json({...userTweets, status: "ok"})
     }
     catch(err) {
         console.log(err)
-        res.status(500).json({error: err.message, status: "error"})
+        res.status(400).json({error: err.message, status: "error"})
     }
 }
-// export const getUserTweetLikesUpdatePaginates = async (req: RequestWithCustomProperties, res: Response) => {
-//     try{
-//         const userId = req.userId as string
-//         const user = req.params.userId
-//         const take = parseInt(req.query.take)
-//         const getUsers = req.query.getUsers === 'true' ? true : false
-//         const time = parseInt(req.query.time)
 
-//         if (isNaN(take) || isNaN(time) || take === undefined || time === undefined) {
-//             throw new Error('missing pagination parameters')
-//         }
-
-//         const response = await tweetsFunc.getUserTweetLikesUpdatePaginates(userId, take, time, user, getUsers)
-//         res.status(201).json({...response, status: "ok"})
-//     }
-//     catch(err) {
-//         console.log(err)
-//         res.status(500).json({error: err.message, status: "error"})
-//     }
-// }
 export const getUserRepliesPaginated = async (req: RequestWithCustomProperties, res: Response) => {
     try{
         const userId = req.userId as string
@@ -482,40 +254,19 @@ export const getUserRepliesPaginated = async (req: RequestWithCustomProperties, 
         const getUsers = req.query.getUsers === 'true' ? true : false
         const firstRequestTime = parseInt(req.query.time)
         const update = req.query.update === 'true' ? true : false
-        // console.log(take, skip, firstRequestTime)
 
         if (isNaN(take) || isNaN(skip) || isNaN(firstRequestTime) || take === undefined || skip === undefined || firstRequestTime === undefined) {
             throw new Error('missing pagination parameters')
         }
 
         const userTweets = await tweetsFunc.getUserRepliesPaginated(userId, skip, take, firstRequestTime, user, getUsers, update)
-        res.status(201).json({...userTweets, status: "ok"})
+        res.status(200).json({...userTweets, status: "ok"})
     }
     catch(err) {
         console.log(err)
-        res.status(500).json({error: err.message, status: "error"})
+        res.status(400).json({error: err.message, status: "error"})
     }
 }
-// export const getUserRepliesUpdatePaginated = async (req: RequestWithCustomProperties, res: Response) => {
-//     try{
-//         const userId = req.userId as string
-//         const user = req.params.userId
-//         const take = parseInt(req.query.take)
-//         const getUsers = req.query.getUsers === 'true' ? true : false
-//         const time = parseInt(req.query.time)
-
-//         if (isNaN(take) || isNaN(time) || take === undefined || time === undefined) {
-//             throw new Error('missing pagination parameters')
-//         }
-
-//         const response = await tweetsFunc.getUserRepliesUpdatePaginated(userId, take, time, user, getUsers)
-//         res.status(201).json({...response, status: "ok"})
-//     }
-//     catch(err) {
-//         console.log(err)
-//         res.status(500).json({error: err.message, status: "error"})
-//     }
-// }
 
 export const deleteTweet = async (req: RequestWithCustomProperties, res: Response, ioFuncs: IoFuncInterface) => {
     try {
@@ -542,7 +293,7 @@ export const deleteTweet = async (req: RequestWithCustomProperties, res: Respons
 
         ioFuncs.sendTweetUpdate(tweetId, deletedFormatedTweet)
 
-        res.status(201).json({message: 'success', status: "ok"})
+        res.status(200).json({message: 'success', status: "ok"})
 
         ioFuncs.unsubscribeFromTweet(tweetId)
         //what to do if this deleted tweet had replies?
@@ -567,7 +318,7 @@ export const getTweetLikesPaginated = async (req: RequestWithCustomProperties, r
 
         const users = await tweetsFunc.getTweetLikesPaginated(userId, tweetId, skip, take, firstRequestTime)
 
-        res.status(201).json({ users, status: "ok" })
+        res.status(200).json({ users, status: "ok" })
     }
     catch (err) {
         console.log(err)

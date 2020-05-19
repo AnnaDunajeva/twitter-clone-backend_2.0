@@ -7,10 +7,10 @@ import routesWithoutAuth from './routes/withoutAuthRoutes'
 import * as http from 'http'
 import session from 'express-session'
 import pgSessionStore from 'connect-pg-simple'
-// import cookieParser from "cookie-parser";
+import cookieParser from "cookie-parser";
 import csurf from 'csurf'
 import pg from 'pg';
-
+import passportSetup from './passport-setup'
 
 const pgConfig: any = {
   max: 1,
@@ -28,20 +28,11 @@ if (process.env.ENV !== 'production') {
 
 const app = express()
 
-// const corsOptions = {
-//    origin: 'http://localhost:3000',
-//    methods: "GET,HEAD,POST,PATCH,DELETE,OPTIONS",
-//    credentials: true,                // required to pass
-//    allowedHeaders: "Content-Type, Authorization, X-Requested-With",
-//  }
-//  // intercept pre-flight check for all routes
-//  app.options('*', cors(corsOptions))
-
-// app.use(cors(corsOptions))
-
 app.use(json())
+//NB! if use secret with cookie parser, make sure its the same as with express-session, or later wont work correctly
+app.use(cookieParser())
 
-//app.disable( 'x-powered-by' ) ;
+app.disable( 'x-powered-by' ) ;
 // app.use( function( req, res, next ) {
 //    res.header( 'Strict-Transport-Security', 7776000000 ) ;
 //    res.header( 'X-Frame-Options', 'SAMEORIGIN' ) ;
@@ -74,6 +65,9 @@ app.use(session({
         secure: process.env.ENV === 'production' ? true : false //should be true in production
     }
 }))
+
+//setup passport and google auth
+passportSetup(app)
 
 app.use('/', routesWithoutAuth)
 

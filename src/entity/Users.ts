@@ -18,8 +18,8 @@ export class Users {
     @Column()
     lastName!: string;
 
-    @Column()
-    password!: string;
+    @Column({nullable: true, type: 'varchar'})
+    password!: string | null;
 
     @Column()
     email!: string;
@@ -29,6 +29,9 @@ export class Users {
 
     @Column('timestamp with time zone')
     createdAt!: string;
+
+    @Column({nullable: true, type: 'timestamp with time zone'})
+    updatedAt!: string | null;
 
     @Column({nullable: true, type: 'timestamp with time zone'})
     deletedAt!: string | null;
@@ -47,6 +50,9 @@ export class Users {
 
     @Column({nullable: true, type: 'bytea'})
     backgroundImage!: Buffer | null;
+
+    @Column({nullable: true, type: 'boolean'})
+    googleAuth!: boolean;
 
     @OneToMany(() => Tokens, tokens => tokens.user)
     tokens!: Tokens[];

@@ -164,7 +164,7 @@ test('should not login nonexisting user', async () => {
             password: 'nonexistenuser', 
             userId: 'nonexistentpassword'
         })
-        .expect(400)
+        .expect(403)
         .expect('Content-Type', /json/)
 
     expect(response.body).toHaveProperty('error')
@@ -180,7 +180,7 @@ test('should not login testuser with wrong password', async () => {
             password: testUser.userId, 
             userId: 'wrongpassword'
         })
-        .expect(400)
+        .expect(403)
         .expect('Content-Type', /json/)
 
     expect(response.body).toHaveProperty('error')
@@ -196,7 +196,7 @@ test('should not login testuser with wrong username', async () => {
             password: 'wrongusername', 
             userId: testUser.password
         })
-        .expect(400)
+        .expect(403)
         .expect('Content-Type', /json/)
 
     expect(response.body).toHaveProperty('error')
@@ -212,7 +212,7 @@ test('should not login user with unverified account', async () => {
             password: testUserTwo.userId, 
             userId: testUserTwo.password
         })
-        .expect(400)
+        .expect(403)
         .expect('Content-Type', /json/)
 
     expect(response.body).toHaveProperty('error')

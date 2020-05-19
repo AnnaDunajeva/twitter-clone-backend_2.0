@@ -104,7 +104,7 @@ test('should save testuser tweet', async () => {
                 text: 'new test tweet'
             })
         })
-        .expect(201)
+        .expect(200)
         .expect('Content-Type', /json/)
     
     expect(response.body).toMatchObject({
@@ -138,7 +138,7 @@ test('should like and dislike testuser tweet', async () => {
     const response = await agent
         .put(`/user/tweets/like/${tweetId}`) 
         .set('CSRF-Token', csrfCookie)
-        .expect(201)
+        .expect(200)
         .expect('Content-Type', /json/)
     
     expect(response.body).toMatchObject({
@@ -154,7 +154,7 @@ test('should like and dislike testuser tweet', async () => {
     const secondResponse = await agent
     .put(`/user/tweets/like/${tweetId}`) 
     .set('CSRF-Token', csrfCookie)
-    .expect(201)
+    .expect(200)
     .expect('Content-Type', /json/)
 
     expect(secondResponse.body).toMatchObject({

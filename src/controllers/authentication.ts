@@ -1,62 +1,18 @@
-import {RequestHandler, Response} from 'express'
-import {RequestWithCustomProperties} from '../models/request'
-import {Users} from "../entity/Users"
-import {getRepository, getConnection} from "typeorm"
+import { RequestHandler, Response } from 'express'
+import { RequestWithCustomProperties } from '../models/request'
+import { Users } from "../entity/Users"
+import { getRepository, getConnection } from "typeorm"
 import bcrypt from 'bcrypt'
 import * as auth from '../utils/authentication'
 import * as users from '../utils/users'
 import { VerificationTokens } from '../entity/VerificationTokens'
-import {sendResetPasswordLink} from '../utils/helpers'
+import { 
+    sendResetPasswordLink,
+    sendEmailConfirmation,
+    sanitazeFirstOrLastname,
+    sanitazeUsername } from '../utils/helpers'
 import { ResetPasswordTokens } from '../entity/ResetPasswordTokens'
-// import { Tokens } from '../entity/Tokens'
-// import {REFRESH_TOKEN_VALID_DURATION, JWT_VALID_DURATION} from '../utils/constants'
-// import {v4 as uuidv4} from 'uuid'
 
-// export const verifyUserEmail: RequestHandler = async (req, res) => {
-//     try {
-//         const verificationToken = req.params.token
-//         const verificationTokensRepo = getRepository(VerificationTokens)
-        
-//         const decodedToken = await auth.verifyAndDecodeEmailVerificationToken(verificationToken)
-
-//         if (!decodedToken) {
-//             throw new Error('Verification failed!')           
-//         }
-//         if (decodedToken.exp < Date.now()) {
-//             throw new Error('Verification link is expired. Please request new verification link.')
-//           }
-
-//         const usersRepo = getRepository(Users)
-//         const user  = await usersRepo.findOne({userId: decodedToken.userId})//if i use select options, then if userId is undefined, it wont return first value in column but returns undefined
-//         //this is unreliable, should rewrite it probably
-        
-//         if (!user || user.verifiedAt) {
-//             throw new Error('Verification failed!')           
-//         }
-    
-//         await verificationTokensRepo
-//             .createQueryBuilder('tokens')
-//             .delete()
-//             .where("tokenId = :tokenId", { tokenId: verificationToken })
-//             .execute();
-    
-//         const time = Date.now()/1000 //postgres func to_timestamp accepts unix time in sec
-//         const verifiedAt = () => `to_timestamp(${time})`
-        
-//         await users.updateUser(user.userId, {verifiedAt})
-    
-//         const token = auth.generateAuthToken(user.userId)
-//         await tokens.saveToken(user.userId, token)
-    
-//         const userProfile = await users.getUserProfile(user.userId)
-    
-//         res.status(201).json({user: userProfile, token, status: "ok"})
-//     }
-//     catch (err) {
-//         console.log(err.message)
-//         res.status(400).json({error: err.message, status:"error"})
-//     }
-// }
 
 export const verifyUserEmail = async (req: RequestWithCustomProperties, res: Response) => {
     try {
@@ -101,7 +57,7 @@ export const verifyUserEmail = async (req: RequestWithCustomProperties, res: Res
     
         const userProfile = await users.getUserProfile(user.userId)
     
-        res.status(201).json({user: userProfile, status: "ok"})
+        res.status(200).json({user: userProfile, status: "ok"})
     }
     catch (err) {
         console.log(err.message)
@@ -109,48 +65,23 @@ export const verifyUserEmail = async (req: RequestWithCustomProperties, res: Res
     }
 }
 
-// export const login: RequestHandler = async (req, res) => {
-//     try {
-//         const {password, userId} = req.body as {password: string, userId: string}
-//         const usersRepo = getRepository(Users)
-//         const user  = await usersRepo.findOne({userId})//if i use select options, then if userId is undefined, it wont return first value in column but returns undefined
-//         //this is unreliable, should rewrite it probably
-
-//         if (user && !user.verifiedAt) {
-//             //? chekck token, if expired delete account if it was created more that 24h ago? if yes, delete account
-//             await auth.checkAndDeleteExpiredUnverifiedAccount(user)            
-//             throw new Error('Username and password do not match!') //for security dont want to give away any extra info
-//             //maybe just throw same error and on client side add to make sure that account is verified first
-//         }
-//         if (!user) {
-//             throw new Error('Username and password do not match!')           
-//         }
-
-//         const match = await bcrypt.compare(password, user.password)
-//         if (!match) {
-//             throw new Error('Username and password do not match!')
-//         } 
-
-//         const token = auth.generateAuthToken(user.userId)
-//         await tokens.saveToken(user.userId, token) //will error be caught if it happens inside this function - it should 
-
-//         const userProfile = await users.getUserProfile(userId)
-
-//         res.status(201).json({user: userProfile, token, status: "ok"})
-//     }
-//     catch (err) {
-//         res.status(400).json({error: err.message, status:"error"})
-//     }
-// }
-
 export const login: RequestHandler = async (req, res) => {
     try {
         const {password, userId} = req.body as {password: string, userId: string}
-        const usersRepo = getRepository(Users)
-        const user  = await usersRepo.findOne({userId})//if i use select options, then if userId is undefined, it wont return first value in column but returns undefined
-        //this is unreliable, should rewrite it probably
-        if(userId.length > 30 || password.length > 50) throw new Error('Input too long.')
+        if (!(userId && password)) {
+            throw new Error('All fields must be filled!')
+        }
+        if (userId.length > 30 || password.length > 50) throw new Error('Input too long.')
 
+        const usersRepo = getRepository(Users)
+        
+        //this is unreliable, should rewrite it probably
+        const user  = await usersRepo.findOne({userId})//if i use select options, then if userId is undefined, it wont return first value in column but returns undefined
+
+        //if user used social auth
+        if(user && !user.password) {
+            throw new Error('Username and password do not match!')
+        }
         if (user && !user.verifiedAt) {
             //? chekck token, if expired delete account if it was created more that 24h ago? if yes, delete account
             await auth.checkAndDeleteExpiredUnverifiedAccount(user)            
@@ -161,7 +92,7 @@ export const login: RequestHandler = async (req, res) => {
             throw new Error('Username and password do not match!')           
         }
 
-        const match = await bcrypt.compare(password, user.password)
+        const match = await bcrypt.compare(password, user.password!)
         if (!match) {
             throw new Error('Username and password do not match!')
         } 
@@ -182,21 +113,9 @@ export const login: RequestHandler = async (req, res) => {
     }
     catch (err) {
         console.log(err)
-        res.status(400).json({error: err.message, status:"error"})
+        res.status(403).json({error: err.message, status:"error"})
     }
 }
-
-// export const logout = async (req: RequestWithCustomProperties, res: Response) => {
-//     try {
-//         const tokenId = req.tokenId as string
-//         await tokens.deleteToken(tokenId)
-
-//         res.status(201).json({message: "success", status: "ok"})
-//     }
-//     catch(err) {
-//         res.status(500).json({error: err.message, status: "error"})
-//     }
-// }
 
 export const logout = async (req: RequestWithCustomProperties, res: Response) => {
     try {
@@ -217,27 +136,17 @@ export const logout = async (req: RequestWithCustomProperties, res: Response) =>
     }
 }
 
-// export const logoutAll = async (req: RequestWithCustomProperties, res: Response) => {
-//     try {
-//         const userId = req.userId as string
-//         await tokens.deleteAllTokens(userId)
-
-//         res.status(201).json({message: "success", status: "ok"})
-//     }
-//     catch(err) {
-//         res.status(500).json({error: err.message, status: "error"})
-//     }
-// }
-
-
 export const generateAndSendResetPasswordLink = async (req: RequestWithCustomProperties, res: Response) => {
     try {
         const email = req.body.email
+
+        if (email.length > 300) throw new Error('Input too long.')
+
         const usersRepo = getRepository(Users)
         const user  = await usersRepo.findOne({email})
-        if (email.length > 300) throw new Error('Input too long.')
+
         if (user && !user.verifiedAt) {
-            //? chekck token, if expired delete account if it was created more that 24h ago?
+            //chekck token, if expired delete account if it was created more that 24h ago
             await auth.checkAndDeleteExpiredUnverifiedAccount(user)            
             throw new Error('Could not send link to provided email adress.') //for security dont want to give away any extra info
             //maybe just throw same error and on client side add to make sure that account is verified first
@@ -250,7 +159,7 @@ export const generateAndSendResetPasswordLink = async (req: RequestWithCustomPro
 
         await sendResetPasswordLink(email, resetPasswordToken, process.env.URL+'/resetPassword')
 
-        res.status(201).json({message: "success", status: "ok"})
+        res.status(200).json({message: "success", status: "ok"})
     }
     catch(err) {
         console.log(err)
@@ -274,11 +183,12 @@ export const resetPassword = async (req: RequestWithCustomProperties, res: Respo
         }
         if (decodedToken.exp < Date.now()) {
             throw new Error('Link is expired!')
-          }
+        }
 
         const usersRepo = getRepository(Users)
-        const user  = await usersRepo.findOne({email: decodedToken.email})//if i use select options, then if userId is undefined, it wont return first value in column but returns undefined
+        //if i use select options, then if userId is undefined, it wont return first value in column but returns undefined
         //this is unreliable, should rewrite it probably
+        const user  = await usersRepo.findOne({email: decodedToken.email})
         if (!user || !user.verifiedAt) {
             throw new Error('Could not reset password!')           
         }
@@ -293,72 +203,201 @@ export const resetPassword = async (req: RequestWithCustomProperties, res: Respo
             .delete()
             .where("tokenId = :tokenId", { tokenId: resetPasswordToken })
             .execute();
+
+        //logOut user from all devices
+        await getConnection().query(`delete from session where sess ->> 'userId'='${user.userId}'`) 
     
-        // const time = Date.now()/1000 //postgres func to_timestamp accepts unix time in sec
-        // const updatedAt = () => `to_timestamp(${time})`
-        // await users.updateUser(user.userId, {updatedAt})
-    
-        await getConnection().query(`delete from session where sess ->> 'userId'='${user.userId}'`) //logOut user from all devices
-    
-        res.status(201).json({message: "success", status: "ok"})
+        res.status(200).json({message: "success", status: "ok"})
     }
     catch (err) {
         console.log(err.message)
-        res.status(400).json({error: err.message, status:"error"})
+        res.status(403).json({error: err.message, status:"error"})
     }
 }
 
-// export const getNewJwtToken = async (req: RequestWithCustomProperties, res: Response) => {
-//     try {
-//         const refreshToken = req.cookies.refreshToken
-//         const userId = req.userId as string
-//         const tokensRepo = getRepository(Tokens)
+export const generateNewEmailVerificationToken = async (req: RequestWithCustomProperties, res: Response) => {
+    try {
+        const email = req.body.email
 
-//         const refreshTokenInDb = await tokensRepo.findOne({tokenId: refreshToken})
+        if (email.length > 300) throw new Error('Input too long.')
+
+        const usersRepo = getRepository(Users)
+        const user  = await usersRepo.findOne({email})
+       
+        if (!user) {
+            throw new Error('Could not send link to provided email adress.')           
+        }
         
-//         if (!refreshTokenInDb) {
-//             res.status(401).json({error: 'Invalid refresh token!', status:"error"})
-//             return
-//         }
+        //delete account if it was created more that 24h ago
+        const userWasDeleted = await auth.checkAndDeleteExpiredUnverifiedAccount(user)            
+        if (userWasDeleted) {
+            throw new Error('Could not send link to provided email adress.') 
+        }
 
-//         const time = Date.now()
+        const verificationToken = await auth.generateEmailVerificationToken(user.userId)
+
+        await sendEmailConfirmation(email, verificationToken, process.env.URL+'/verify')     
+    
+        res.status(200).json({status: "ok", message: "success"})
+    }
+    catch (err) {
+        console.log(err)
+        res.status(403).json({error: err.message, status:"error"})
+    }
+}
+
+export const authWithGoogleCallback = async (req: RequestWithCustomProperties, res: Response) => {
+    try {   
+        const user = req.user as Users
         
-//         const tokenExpiresAt = new Date(refreshTokenInDb.createdAt).getTime() + REFRESH_TOKEN_VALID_DURATION
-//         if (tokenExpiresAt > time) {
-//             res.status(401).json({error: 'Refresh token expired!', status:"error"})
-//             return
-//         }
+        if (!user) {
+            throw new Error('Oops, something went wrong. Try signing in again.')
+        }
+        //user signed up previously using signup form, but did not verify email
+        if (user && !user.verifiedAt && !user.googleAuth) {
+            //if account was created more than 24h ago, we delete it and as user to signup again
+            //(in case e.g somebody else used user email to create an account but couldnt verify)
+            const userWasDeleted = await auth.checkAndDeleteExpiredUnverifiedAccount(user)            
+
+            if (userWasDeleted) {
+                throw new Error('Account with this email was removed because it was not verified during 24 hours after it was created. Please sign in again.')
+            }
+
+            //if it was created less than 24h aga, we verify it
+            const time = Date.now()/1000
+            const verifiedAt = () => `to_timestamp(${time})`
+
+            await users.updateUser(user.userId, {verifiedAt})
+            user.verifiedAt = 'somestring' //does not really matter, we only need it to be truthy - we continue to next step
+        }
+
+        //here we dont care if user.googleAuth is true or false, because it does not matter - in both cases
+        //account is verified and user went through google oauth
+        if (user && user.verifiedAt) {
+            req.session!.userId = user.userId
         
-//         await tokensRepo
-//         .createQueryBuilder('tokens')
-//         .delete()
-//         .where("tokenId = :tokenId", { tokenId: refreshToken })
-//         .execute();
+            //add userId cookie
+            res.cookie(process.env.USER_COOKIE_ID || 'id', user.userId, {
+                maxAge: parseInt(process.env.SESSION_LIFETIME || '3600000'),
+                sameSite: 'none',
+                httpOnly: false, 
+                secure: process.env.ENV === 'production' ? true : false //should be true in production
+            })
         
-//         res.clearCookie('refreshToken', {httpOnly: true, secure: false}) //how to delete old refresh token on browser and then change to new one?
+            //we cant send data and redirect at the same time so i cant send profile data back, 
+            //client will have to fetch profile after getting session cookie
+            res.status(200).redirect(`${process.env.URL}/`);
+        }
 
-//         const newRefreshToken = await auth.generateRefreshToken(userId, time)
-//         res.cookie('refreshToken', newRefreshToken, {
-//             expires: new Date(time + REFRESH_TOKEN_VALID_DURATION),
-//             httpOnly: true,
-//             secure: false
-//           });
+        //user signed up with google, but did not complete account creation 
+        if (user && !user.verifiedAt && user.googleAuth) {
+            //send userData that we have plus token to use when completing account creation (similar to email verification)
+            
+            const verificationToken = await auth.generateGoogleAuthlVerificationToken(user.userId, user.email)
+            req.session!.verificationToken = verificationToken
 
-//         const newJwtToken = auth.generateJwtToken(userId, time)
+            //send some data to client so it will be able to show user what first and lastname we got from oauth
+            const oauthData = JSON.stringify({
+                firstName: user.firstName,
+                lastName: user.lastName
+            })
+            res.cookie(process.env.COOKIE_OAUTH_USER_DATA_NAME || 'oauth_user_data', oauthData, {
+                maxAge: parseInt(process.env.COOKIE_OAUTH_VERIFICATION_TOKEN_LIFETIME || '3600000'),
+                sameSite: 'none',
+                httpOnly: false, 
+                encode: String,
+                secure: process.env.ENV === 'production' ? true : false //should be true in production
+            })
+    
+            res
+                .status(200)
+                .redirect(`${process.env.URL}/login`);
+        }
 
+    }
+    catch (err) {
+        console.log(err)
+        res.status(403).redirect(`${process.env.URL}/login`)
+    }
+}
 
-//         res.status(201).json({
-//             message: "success", 
-//             status: "ok", 
-//             jwtToken: {
-//                 userId,
-//                 token: newJwtToken,
-//                 expiresAt: time + JWT_VALID_DURATION
-//             }
-//         })
-//     }
-//     catch (err) {
-//         console.log(err.message)
-//         res.status(400).json({error: err.message, status:"error"})
-//     }
-// }
+export const completeGoogleAuthAccountCreation = async (req: RequestWithCustomProperties, res: Response) => {
+    try {
+        const usersRepo = getRepository(Users)
+
+        const {userId, firstName, lastName} = req.body as {userId: string, firstName: string, lastName: string}
+        
+        const verificationToken = req.session!.verificationToken
+        if (!verificationToken) {
+            throw new Error('Oops, something went wrong. Try signing in again.')
+        }
+
+        if (!(userId && firstName && lastName)) {
+            throw new Error('All fields must be filled!')
+        }
+        if (userId.length > 20 || firstName.length > 100 || lastName.length > 100) {
+            throw new Error('Input too long.')
+        }
+
+        let decodedToken;
+        try {
+            decodedToken = await auth.verifyAndDecodeGoogleAuthVerificationToken(verificationToken)
+        } catch (err) {
+            req.session!.destroy(err => console.log(err))
+            res.clearCookie(process.env.SESSION_NAME as string || 'sid')
+            res.clearCookie(process.env.COOKIE_OAUTH_USER_DATA_NAME || 'oauth_user_data')
+            throw new Error('Invalid verification token. Please sign in again.')
+        }
+
+        const user = await usersRepo.findOne({email: decodedToken.email})
+        
+        if (!user || user.verifiedAt) {
+            throw new Error('Verification failed!')           
+        }
+
+        //check if we have already user with such username
+        const userInDb = await usersRepo.findOne({userId})
+
+        //delete account if it was created more that 24h ago then allow to use this username again
+        if (userInDb) {
+            if (userInDb.verifiedAt) {
+                throw new Error('Username already exists!')
+            }
+            const userDeleted = await auth.checkAndDeleteExpiredUnverifiedAccount(userInDb)
+            if (!userDeleted) {
+                throw new Error('Username already exists!')
+            }
+        }
+
+        const time = Date.now()/1000 //postgres func to_timestamp accepts unix time in sec
+        const userDataToUpdate = { 
+            userId: sanitazeUsername(userId.toLowerCase()),
+            firstName: sanitazeFirstOrLastname(firstName), 
+            lastName: sanitazeFirstOrLastname(lastName),
+            verifiedAt: () => `to_timestamp(${time})`
+        }
+                
+        await users.updateUser(user.userId, userDataToUpdate)
+    
+        req.session!.userId = userDataToUpdate.userId
+        res.cookie(process.env.USER_COOKIE_ID || 'id', userDataToUpdate.userId, {
+            maxAge: parseInt(process.env.SESSION_LIFETIME || '3600000'),
+            sameSite: 'none', //smasite true does not allow to acces cookie in firefox
+            httpOnly: false, 
+            secure: process.env.ENV === 'production' ? true : false //should be true in production
+        })
+    
+        const newUserProfile = await users.getUserProfile(userId)
+
+        // res.clearCookie(process.env.COOKIE_OAUTH_VERIFICATION_TOKEN_NAME || 'verification_token')
+        
+        //do i need to remove token from session?
+        delete req.session!.verificationToken
+        res.clearCookie(process.env.COOKIE_OAUTH_USER_DATA_NAME || 'oauth_user_data')
+        res.status(200).json({user: newUserProfile, status: "ok"})
+    }
+    catch (err) {
+        console.log(err)
+        res.status(403).json({error: err.message, status:"error"})
+    }
+}

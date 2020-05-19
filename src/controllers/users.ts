@@ -1,20 +1,17 @@
-import {getRepository} from "typeorm"
-import {Users} from "../entity/Users"
-// import {Tweets} from "../entity/Tweets"
-import {RequestHandler, Response} from 'express'
-import {RequestWithCustomProperties} from '../models/request'
-//import {UpdateUserData} from '../models/users'
+import { getRepository } from "typeorm"
+import { Users } from "../entity/Users"
+import { RequestHandler, Response } from 'express'
+import { RequestWithCustomProperties  } from '../models/request'
 import bcrypt from 'bcrypt'
-// import {formatUser} from '../utils/helpers'
-// import * as tokens from '../utils/tokens'
-// import * as auth from '../utils/authentication'
 import * as users from '../utils/users'
 import * as auth from '../utils/authentication'
 import { DefaultProfileImage } from "../entity/DefaultProfileImage"
-import sharp from 'sharp'
-import {omit} from 'lodash'
-import {sendEmailConfirmation, validateEmail, removeBlacklistCharsForSearch, sanitazeFirstOrLastname, sanitazeUsername, sanitazeLocation} from '../utils/helpers'
-// import {IoFuncInterface} from '../models/ioFuncs'
+import {
+    sendEmailConfirmation, 
+    validateEmail, 
+    removeBlacklistCharsForSearch, 
+    sanitazeFirstOrLastname, 
+    sanitazeUsername } from '../utils/helpers'
 
 export const getUserProfile = async (req: RequestWithCustomProperties, res: Response) => {
     try {
@@ -33,6 +30,11 @@ export const getUser = async (req: RequestWithCustomProperties, res: Response) =
     try {
         const userId = req.userId as string
         const userIdToGet = req.params.userId as string
+
+        if (!userIdToGet) {
+            throw new Error('Invalid request')
+        }
+
         const user = await users.getUsersByIds(userId, [userIdToGet])
 
         res.status(200).json({user: user, status: "ok"})
@@ -43,24 +45,8 @@ export const getUser = async (req: RequestWithCustomProperties, res: Response) =
     }
 }
 
-// export const getUserAvatar = async (req: RequestWithCustomProperties, res: Response) => {
-//     try {
-//         // const userId = req.userId as string
-//         const userIdToGet = req.params.userId as string
-
-//         const usersRepo = getRepository(Users)
-//         const user = await usersRepo.findOne({userId: userIdToGet})
-//         const avatar = user?.avatar?.toString('base64') || null
-
-//         res.status(201).json({image: avatar, status: "ok"})
-//     }
-//     catch (err) {
-//         res.status(400).json({error: err, status: "error"})
-//     }
-// }
 export const getUserAvatar = async (req: RequestWithCustomProperties, res: Response) => {
     try {
-        // const userId = req.userId as string
         const userIdToGet = req.params.userId as string
 
         const usersRepo = getRepository(Users)
@@ -94,7 +80,6 @@ export const getUserAvatarDefault = async (req: RequestWithCustomProperties, res
             .createQueryBuilder("image")
             .take(1)
             .getOne()
-        // console.log(avatarResponse)
 
         res.set('Content-Type', 'image/jpg')
         res.status(200).send(avatarResponse?.image || null)
@@ -107,7 +92,6 @@ export const getUserAvatarDefault = async (req: RequestWithCustomProperties, res
 
 export const getUserBackground = async (req: RequestWithCustomProperties, res: Response) => {
     try {
-        // const userId = req.userId as string
         const userIdToGet = req.params.userId as string
 
         const usersRepo = getRepository(Users)
@@ -131,29 +115,29 @@ export const addUser: RequestHandler = async (req, res) => {
         const usersRepo = getRepository(Users)
         const {userId, firstName, lastName, password, email} = req.body as {userId: string, firstName: string, lastName: string,  password: string, email: string}
         
-        // const problem = await usersRepo.findOne(undefined)
-        // console.log(problem)
         if (!(userId && firstName && lastName && email && password)) {
             throw new Error('All fields must be filled!')
         }
-        const userInDb = await usersRepo.findOne({userId})//if i use select options, then if userId is undefined, it wont return first value in column but returns undefined
+        //if i use select options, then if userId is undefined, it wont return first value in column but returns undefined
         //this is unreliable, should rexrite it probably
+        const userInDbWithSameUsername = await usersRepo.findOne({userId})
 
-        //? chekck token, if expired delete account if it was created more that 24h ago? 
-        //then allow to register with this username again?
-        let userDeleted = false
-        if (userInDb && !userInDb.verifiedAt) {
-            userDeleted = await auth.checkAndDeleteExpiredUnverifiedAccount(userInDb)
+        //chekck token, if expired delete account if it was created more that 24h ago
+        //then allow to register with this username again
+        if (userInDbWithSameUsername && !userInDbWithSameUsername.verifiedAt) {
+            const userDeleted = await auth.checkAndDeleteExpiredUnverifiedAccount(userInDbWithSameUsername)
+            if (!userDeleted) { 
+                throw new Error('Username already exists!')
+            }
+        }
+        const userInDbWithSameEmail = await usersRepo.findOne({email})
+        if (userInDbWithSameEmail && !userInDbWithSameEmail.verifiedAt) { 
+            const userDeleted = await auth.checkAndDeleteExpiredUnverifiedAccount(userInDbWithSameEmail)
+            if (!userDeleted) {
+                throw new Error('Email already taken!')
+            }
         }
 
-        if (userInDb && !userDeleted) { 
-            throw new Error('Username already exists!')
-        }
-
-        if (await usersRepo.findOne({email})) { //if i use select options, then if userId is undefined, it wont return first value in column but returns undefined
-                                                //this is unreliable, should rexrite it probably
-            throw new Error('Email already taken!')
-        }
         if (!validateEmail(email)) {
             throw new Error('Provided email adress is invalid!')
         }
@@ -169,14 +153,8 @@ export const addUser: RequestHandler = async (req, res) => {
             email: email,
             password: await bcrypt.hash(password.toString(), 8), //8 should be changed to 12!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             createdAt: () => `to_timestamp(${Date.now()/1000})`, //postgres func to_timestamp accepts unix time in sec
-            avatar: null, //can remove all these nulls really
-            backgroundImage: null,
-            backgroundColor: null,
-            description: null,
-            location: null,
-            verifiedAt: null
         }
-        //wrap in try catch to send custom error message if error occurs
+        //?wrap in try catch to send custom error message if error occurs
         await usersRepo
                 .createQueryBuilder('users')
                 .insert()
@@ -185,86 +163,25 @@ export const addUser: RequestHandler = async (req, res) => {
         
         const verificationToken = await auth.generateEmailVerificationToken(user.userId)
 
-        await sendEmailConfirmation(email, verificationToken, process.env.URL+'/verify') //dunno how to get it from req
-        //I think in case of email error no need really to delete user from db here as it will be eligible for delete after 24h anyway if not verified    
+        await sendEmailConfirmation(email, verificationToken, process.env.URL+'/verify') //bad that url is hardcoded, maybe send it with request?
+        //I think in case of email error no need really to delete user from db here as it will be eligible for delete 
+        //after 24h anyway if not verified    
     
-        // const userProfile = await users.getUserProfile(userId)
-        res.status(201).json({ status: "ok"})
-
-        // const token = auth.generateAuthToken(user.userId)
-        // await tokens.saveToken(user.userId, token)
-        
-        // const userProfile = await users.getUserProfile(userId)
-        // res.status(201).json({ user: userProfile, token, status: "ok"})
+        res.status(200).json({ status: "ok"})
     } catch (err) {
         console.log(err)
         res.status(400).json({error: err.message, status: "error"}) //how to send error properly? Do i need to serialize error object somehow?
     }
 }
 
-// export const getAllUsers: RequestHandler = async (req, res) => {
-//     try {
-//         const userIds = await users.getAllUserIds()
-//         const userProfiles = await users.getUsersByIds(userIds)
-
-//         res.status(201).json({users: userProfiles})
-//     }
-//     catch (err) {
-//         res.status(400).json({error: err.message})
-//     }
-// }
-// export const getAllUsersExeptAuthedUser = async (req: RequestWithCustomProperties, res: Response) => {
-//     try {
-//         const userId = req.userId as string
-//         const userProfiles = await users.getAllUsersExeptAuthedUser(userId)
-
-//         res.status(201).json({users: userProfiles})
-//     }
-//     catch (err) {
-//         res.status(400).json({error: err.message})
-//     }
-// }
-
-// export const updateUser = async (req: RequestWithCustomProperties, res: Response) => {
-//     try {
-//         const userDataToUpdate = req.body
-//         console.log(userDataToUpdate)
-//         const userId = req.userId as string
-        
-//         //need to somehow validate data that user wants to change
-//         const supportedProperties = ['firstName', 'lastName', 'location', 'description', 'avatar', 'background', 'email']
-//         if (Object.keys(userDataToUpdate).length === 0) {
-//             throw new Error('no fields provided')
-//         }
-//         for (let key in userDataToUpdate) {
-//             if (!supportedProperties.includes(key)) {
-//                 throw new Error('invalid field')
-//             }
-//         }
-
-//         await users.updateUser(userId, userDataToUpdate)
-
-//         const newUserProfile = await users.getUserProfile(userId)
-
-//         res.status(201).json({user: newUserProfile, status: "ok"})
-//     }
-//     catch (err) {
-//         console.log(err)
-//         res.status(400).json({error: err.message, status: "error"}) 
-//     }
-// }
-
 export const updateUser = async (req: RequestWithCustomProperties, res: Response) => {
     //handels only 1 file, so avatar and background cant be updated at the same time
     try {
         const userDataToUpdate = JSON.parse(req.body.user)
-        // console.log(userDataToUpdate)
-        // throw new Error('test from backend')
         const userId = req.userId as string
         const file = req.file?.buffer || null
         const crop = userDataToUpdate.crop || null
         
-        //need to somehow validate data that user wants to change
         const supportedProperties = ['firstName', 'lastName', 'location', 'description', 'avatar', 'backgroundColor', 'backgroundImage', 'crop']
         if (Object.keys(userDataToUpdate).length === 0) {
             throw new Error('No fields provided.')
@@ -277,38 +194,12 @@ export const updateUser = async (req: RequestWithCustomProperties, res: Response
         if (file && !crop) {
             throw new Error('Crop options not specified.')
         }
-        
-        if (file && userDataToUpdate.backgroundImage) {
-            userDataToUpdate.backgroundImage = await sharp(file).extract({left: Math.round(crop.x), top: Math.round(crop.y), width: Math.round(crop.width), height: Math.round(crop.height)}).resize({width: 1000, height: 200}).jpeg().toBuffer()
-        } else if (file && userDataToUpdate.avatar) {
-            userDataToUpdate.avatar = await sharp(file).extract({left: Math.round(crop.x), top: Math.round(crop.y), width: Math.round(crop.width), height: Math.round(crop.height)}).resize({width: 200, height: 200}).jpeg().toBuffer()
-        }
-        if (userDataToUpdate.firstName) {
-            if (userDataToUpdate.firstName.length > 100) throw new Error('First name too long.')
-            userDataToUpdate.firstName = sanitazeFirstOrLastname(userDataToUpdate.firstName)
-        }
-        if (userDataToUpdate.lastName) {
-            if (userDataToUpdate.lastName.length > 100) throw new Error('Last name too long.')
-            userDataToUpdate.lastName = sanitazeFirstOrLastname(userDataToUpdate.lastName)
-        }
-        if (userDataToUpdate.location) {
-            if (userDataToUpdate.location.length > 100) throw new Error('Location too long.')
-            userDataToUpdate.location = sanitazeLocation(userDataToUpdate.location.trim())
-        }
-        if (userDataToUpdate.description) {
-            if (userDataToUpdate.description.length > 150) throw new Error('Description too long.')
-            console.log(userDataToUpdate.description)
-            userDataToUpdate.description = userDataToUpdate.description.trim().replace(/\s+/g, ' ') //replace whitespaces
-            console.log(userDataToUpdate.description)
-        }
 
-        // console.log(userDataToUpdate)
-
-        await users.updateUser(userId, omit(userDataToUpdate, 'crop'))
+        await users.updateUser(userId, userDataToUpdate, file)
 
         const newUserProfile = await users.getUserProfile(userId)
 
-        res.status(201).json({user: newUserProfile, status: "ok"})
+        res.status(200).json({user: newUserProfile, status: "ok"})
     }
     catch (err) {
         console.log(err)
@@ -342,16 +233,7 @@ export const deleteBackground = async (req: RequestWithCustomProperties, res: Re
         res.status(400).json({error: err.message, status: "error"}) 
     }
 }
-// export const getUsersByIds = async (req: RequestWithCustomProperties, res: Response) => { 
-//     try {
-//         const userIds = req.body.users as string[]
-//         const formatedUsers = userIds.length > 0 ? await users.getUsersByIds(userIds) : {}
 
-//         res.status(201).json({ users: formatedUsers })
-//     } catch (err) {
-//         res.status(500).json({error: err})
-//     }
-// }
 export const getAllUsersPaginated = async (req: RequestWithCustomProperties, res: Response) => {
     try{
         const userId = req.userId as string
@@ -401,13 +283,3 @@ export const findUserPaginated = async (req: RequestWithCustomProperties, res: R
         res.status(400).json({error: err.message, status: "error"})
     }
 }
-
-// export const deleteUser = async (req: RequestWithCustomProperties, res: Response) => {
-//     try {
-//         const userId = req.userId as string
-//         const usersRepo = getRepository(Users)
-//     }
-//     catch (err) {
-//         res.status(400).json({error: err})
-//     }
-// }
