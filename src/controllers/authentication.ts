@@ -52,7 +52,7 @@ export const verifyUserEmail = async (req: RequestWithCustomProperties, res: Res
             maxAge: parseInt(process.env.SESSION_LIFETIME || '3600000'),
             sameSite: 'none', //smasite true does not allow to acces cookie in firefox
             httpOnly: false, 
-            secure: process.env.ENV === 'production' ? true : false //should be true in production
+            //secure: process.env.ENV === 'production' ? true : false //should be true in production
         })
     
         const userProfile = await users.getUserProfile(user.userId)
@@ -104,7 +104,7 @@ export const login: RequestHandler = async (req, res) => {
             maxAge: parseInt(process.env.SESSION_LIFETIME || '3600000'),
             sameSite: 'none',
             httpOnly: false, 
-            secure: process.env.ENV === 'production' ? true : false //should be true in production
+            //secure: process.env.ENV === 'production' ? true : false //should be true in production
         })
 
         const userProfile = await users.getUserProfile(userId)
@@ -249,12 +249,13 @@ export const generateNewEmailVerificationToken = async (req: RequestWithCustomPr
 export const authWithGoogleCallback = async (req: RequestWithCustomProperties, res: Response) => {
     try {   
         const user = req.user as Users
-        
+        console.log('authWithGoogleCallback', user)
         if (!user) {
             throw new Error('Oops, something went wrong. Try signing in again.')
         }
         //user signed up previously using signup form, but did not verify email
         if (user && !user.verifiedAt && !user.googleAuth) {
+            console.log('user && !user.verifiedAt && !user.googleAuth')
             //if account was created more than 24h ago, we delete it and as user to signup again
             //(in case e.g somebody else used user email to create an account but couldnt verify)
             const userWasDeleted = await auth.checkAndDeleteExpiredUnverifiedAccount(user)            
@@ -274,6 +275,7 @@ export const authWithGoogleCallback = async (req: RequestWithCustomProperties, r
         //here we dont care if user.googleAuth is true or false, because it does not matter - in both cases
         //account is verified and user went through google oauth
         if (user && user.verifiedAt) {
+            console.log('user && user.verifiedAt')
             req.session!.userId = user.userId
         
             //add userId cookie
@@ -281,7 +283,7 @@ export const authWithGoogleCallback = async (req: RequestWithCustomProperties, r
                 maxAge: parseInt(process.env.SESSION_LIFETIME || '3600000'),
                 sameSite: 'none',
                 httpOnly: false, 
-                secure: process.env.ENV === 'production' ? true : false //should be true in production
+                //secure: process.env.ENV === 'production' ? true : false 
             })
         
             //we cant send data and redirect at the same time so i cant send profile data back, 
@@ -291,24 +293,26 @@ export const authWithGoogleCallback = async (req: RequestWithCustomProperties, r
 
         //user signed up with google, but did not complete account creation 
         if (user && !user.verifiedAt && user.googleAuth) {
+            console.log('user && !user.verifiedAt && user.googleAuth')
             //send userData that we have plus token to use when completing account creation (similar to email verification)
             
             const verificationToken = await auth.generateGoogleAuthlVerificationToken(user.userId, user.email)
             req.session!.verificationToken = verificationToken
+            console.log('verificationToken', verificationToken)
 
             //send some data to client so it will be able to show user what first and lastname we got from oauth
             const oauthData = JSON.stringify({
-                firstName: user.firstName,
-                lastName: user.lastName
+                firstName: encodeURI(user.firstName || ''),
+                lastName: encodeURI(user.lastName || '')
             })
+            console.log('oauthData', oauthData)
             res.cookie(process.env.COOKIE_OAUTH_USER_DATA_NAME || 'oauth_user_data', oauthData, {
                 maxAge: parseInt(process.env.COOKIE_OAUTH_VERIFICATION_TOKEN_LIFETIME || '3600000'),
                 sameSite: 'none',
                 httpOnly: false, 
                 encode: String,
-                secure: process.env.ENV === 'production' ? true : false //should be true in production
+                //secure: process.env.ENV === 'production' ? true : false 
             })
-    
             res
                 .status(200)
                 .redirect(`${process.env.URL}/login`);
@@ -384,12 +388,10 @@ export const completeGoogleAuthAccountCreation = async (req: RequestWithCustomPr
             maxAge: parseInt(process.env.SESSION_LIFETIME || '3600000'),
             sameSite: 'none', //smasite true does not allow to acces cookie in firefox
             httpOnly: false, 
-            secure: process.env.ENV === 'production' ? true : false //should be true in production
+            //secure: process.env.ENV === 'production' ? true : false //should be true in production
         })
     
         const newUserProfile = await users.getUserProfile(userId)
-
-        // res.clearCookie(process.env.COOKIE_OAUTH_VERIFICATION_TOKEN_NAME || 'verification_token')
         
         //do i need to remove token from session?
         delete req.session!.verificationToken

@@ -30,7 +30,7 @@ const app = express()
 
 app.use(json())
 //NB! if use secret with cookie parser, make sure its the same as with express-session, or later wont work correctly
-app.use(cookieParser())
+app.use(cookieParser(process.env.SESSION_SECRET))
 
 app.disable( 'x-powered-by' ) ;
 // app.use( function( req, res, next ) {
@@ -62,7 +62,7 @@ app.use(session({
         maxAge: parseInt(process.env.SESSION_LIFETIME || '3600000'),
         sameSite: true,
         httpOnly: true, 
-        secure: process.env.ENV === 'production' ? true : false //should be true in production
+        //secure: process.env.ENV === 'production' ? true : false //should be true in production
     }
 }))
 

@@ -28,6 +28,7 @@ export interface ExtendedUser {
     backgroundImage: boolean;
     description: string | null;
     location: string | null;
+    updatedAt?: string | null;
     following?: boolean; //only for nonAuthed
     email?: string; //only for authedUser
     followingsCount?: number;
@@ -40,6 +41,7 @@ export interface UsersInterface {
 }
 
 export interface UpdateUserData {
+    updatedAt?: () => string;
     userId?: string;
     firstName?: string;
     lastName?: string;

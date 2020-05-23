@@ -1,6 +1,6 @@
 import {FormatedUser, ExtendedUser} from '../models/users'
 import {TweetsInterface, ExtendedTweet, FormatedTweet} from '../models/tweets' //FormatedTweet
-import {v4 as uuidv4} from 'uuid';
+// import {v4 as uuidv4} from 'uuid';
 import sgMail from '@sendgrid/mail'
 // const sgMail = require('@sendgrid/mail')
 import { promises as fsPromises } from 'fs';
@@ -11,15 +11,17 @@ const URL = process.env.URL+'/api'
 
 export const formatUser = (user: ExtendedUser) => {
     const createdAt = new Date(user.createdAt as string)
+    const updatedAt = user.updatedAt ? (new Date(user.updatedAt as string)).getTime() : null
+
     const formatedUser: FormatedUser = {
         userId: user.userId,
         firstName: user.firstName,
         lastName: user.lastName,
-        avatar: user.avatar ?`${URL}/user/${user.userId}/avatar?${uuidv4()}`: `${URL}/user/${user.userId}/avatar/default`,
+        avatar: user.avatar ?`${URL}/user/${user.userId}/avatar${updatedAt ? '?'+updatedAt : ''}`: `${URL}/user/avatar/default`,
         createdAt: createdAt.getTime(),
         backgroundColor: user.backgroundColor,
     //   backgroundImage: user.backgroundImage?.toString('base64') || null,
-        backgroundImage: user.backgroundImage ? `${URL}/user/${user.userId}/background?${uuidv4()}` : null,
+        backgroundImage: user.backgroundImage ? `${URL}/user/${user.userId}/background${updatedAt ? '?'+updatedAt : ''}` : null,
         description: user.description,
         location: user.location,
         followersCount: user.followersCount,

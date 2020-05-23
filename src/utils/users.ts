@@ -23,7 +23,7 @@ export const getUserProfile = async (userId: string) => {
     .leftJoin("users.followings", "followings")
     .where("users.userId =:id", { id: userId })
     .andWhere("users.verifiedAt is not null")
-    .select(['followings.followingId', 'users.userId','users.firstName', 'users.lastName','users.createdAt', 'users.avatar', 'users.backgroundColor', 'users.backgroundImage','users.email', 'users.description', 'users.location']) 
+    .select(['followings.followingId', 'users.userId','users.firstName', 'users.lastName','users.createdAt', 'users.updatedAt', 'users.avatar', 'users.backgroundColor', 'users.backgroundImage','users.email', 'users.description', 'users.location']) 
     .getOne()
 
     if(!userFromDB) {
@@ -51,7 +51,7 @@ export const getUnverifiedUserProfile = async (userId: string) => {
     .createQueryBuilder("users")
     .leftJoin("users.followings", "followings")
     .where("users.userId =:id", { id: userId })
-    .select(['followings.followingId', 'users.userId','users.firstName', 'users.lastName','users.createdAt', 'users.avatar', 'users.backgroundColor', 'users.backgroundImage','users.email', 'users.description', 'users.location', 'users.verifiedAt']) 
+    .select(['followings.followingId', 'users.userId','users.firstName', 'users.updatedAt', 'users.lastName','users.createdAt', 'users.avatar', 'users.backgroundColor', 'users.backgroundImage','users.email', 'users.description', 'users.location', 'users.verifiedAt']) 
     .getOne()
 
     if(!userFromDB) {
@@ -110,7 +110,7 @@ export const getUserFollowingsPaginated = async (authedUser: string, userId: str
     const users  = await usersRepo
     .createQueryBuilder("users")
     .leftJoin("users.followings", "followings")
-    .select(['followings.followingId', 'users.userId','users.firstName', 'users.lastName','users.createdAt', 'users.avatar', 'users.backgroundColor', 'users.backgroundImage','users.description', 'users.location']) 
+    .select(['followings.followingId', 'users.userId','users.firstName', 'users.updatedAt', 'users.lastName','users.createdAt', 'users.avatar', 'users.backgroundColor', 'users.backgroundImage','users.description', 'users.location']) 
     .where("users.userId in (:...ids)", { ids: followingsIds })
     .getMany()
 
@@ -166,7 +166,7 @@ export const getUserFollowersPaginated = async (authedUser: string, userId: stri
     const users  = await usersRepo
         .createQueryBuilder("users")
         .leftJoin("users.followings", "followings")
-        .select(['followings.followingId', 'users.userId','users.firstName', 'users.lastName','users.createdAt', 'users.avatar', 'users.backgroundColor', 'users.backgroundImage','users.description', 'users.location']) 
+        .select(['followings.followingId', 'users.userId','users.firstName', 'users.lastName','users.updatedAt','users.createdAt', 'users.avatar', 'users.backgroundColor', 'users.backgroundImage','users.description', 'users.location']) 
         .where("users.userId in (:...ids)", { ids: followersIds })
         // .andWhere("users.verifiedAt is not null")
         .getMany()
@@ -212,7 +212,7 @@ export const getUsersByIds = async (authedUser: string, ids: string[]) => {
             .leftJoin("users.followings", "followings")
             .where("users.userId IN (:...ids)", { ids: idsWithoutAuthedUser})
             .andWhere("users.verifiedAt is not null")
-            .select(['followings.followingId', 'users.userId','users.firstName', 'users.lastName','users.createdAt', 'users.avatar', 'users.backgroundColor', 'users.backgroundImage','users.description', 'users.location']) 
+            .select(['followings.followingId', 'users.userId','users.firstName', 'users.lastName','users.updatedAt','users.createdAt', 'users.avatar', 'users.backgroundColor', 'users.backgroundImage','users.description', 'users.location']) 
             .getMany()
 
         
@@ -280,6 +280,7 @@ export const updateUser = async (userId: string, userDataToUpdate: UpdateUserDat
         if (userDataToUpdate.description.length > 150) throw new Error('Description too long.')
         userDataToUpdate.description = userDataToUpdate.description.trim().replace(/\s+/g, ' ') //replace whitespaces
     }
+    userDataToUpdate.updatedAt = () => `to_timestamp(${Date.now()/1000})`
 
     const usersRepo = getRepository(Users)
     await usersRepo
@@ -311,6 +312,7 @@ export const getAllUsersPaginated = async (authedUser: string, skip: number, tak
     .addSelect('users.firstName', 'firstName')
     .addSelect('users.lastName', 'lastName')
     .addSelect('users.createdAt', 'createdAt')
+    .addSelect('users.updatedAt', 'updatedAt')
     .addSelect('users.avatar', 'avatar')
     .addSelect('users.backgroundColor', 'backgroundColor')
     .addSelect('users.backgroundImage', 'backgroundImage')
@@ -331,26 +333,24 @@ export const getAllUsersPaginated = async (authedUser: string, skip: number, tak
         .getQuery()
         return "users.userId not IN " + subQuery
     })
-    .take(take)
-    .skip(skip)
     .groupBy('users.userId')
     .addGroupBy('users.firstName')
     .addGroupBy('users.lastName')
     .addGroupBy('users.createdAt')
+    .addGroupBy('users.updatedAt')
     .addGroupBy('users.avatar')
     .addGroupBy('users.backgroundColor')
     .addGroupBy('users.backgroundImage')
     .addGroupBy('users.description')
     .addGroupBy('users.location')
     .orderBy('count(distinct "followers"."userId")', 'DESC')
+    .limit(take)
+    .offset(skip)
     .getRawMany()
     
-    console.log(users)
-
     if(users.length === 0) {
         return {}
     }
-
     const formatedUsers: UsersInterface = {};
 
     users.map((userFromDB, index) => {
@@ -377,7 +377,7 @@ export const findUserPaginated = async (authedUser: string, userToFind: string, 
 
     .createQueryBuilder("users")
     .leftJoin("users.followings", "followings")
-    .select(['followings.followingId', 'users.userId','users.firstName', 'users.lastName','users.createdAt', 'users.avatar', 'users.backgroundColor', 'users.backgroundImage','users.description', 'users.location']) 
+    .select(['followings.followingId', 'users.userId','users.firstName', 'users.lastName','users.updatedAt','users.createdAt', 'users.avatar', 'users.backgroundColor', 'users.backgroundImage','users.description', 'users.location']) 
     .addSelect(
         `ts_rank(
             (

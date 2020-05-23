@@ -172,7 +172,8 @@ export const verifyAndDecodeResetPasswordToken = async (token: string) => {
 export const generateGoogleAuthlVerificationToken = async (userId: string, email:string) => {
   //because we store token on session, we actually dont need to store it in db (session does that)
   const time = Date.now()
-  const exp = (time + 3600000)/1000 //60 min
+
+  const exp = (time + 900000)/1000 //15 min
   const code = cryptoRandomString({length: 12, type: "base64"})
   const token = jwt.sign({tokenId: code, userId, email, exp }, privateKey) //tokenId not really needed
     

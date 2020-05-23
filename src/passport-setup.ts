@@ -1,34 +1,11 @@
 import passport from 'passport'
 import { Strategy as GoogleStrategy }  from 'passport-google-oauth20'
 import { authWithGoogleCallback } from './controllers/authentication'
-import { Express, NextFunction, Response } from 'express'
+import { Express } from 'express'
 import { Users } from "./entity/Users"
 import { getRepository } from "typeorm"
 import { v4 as uuidv4 } from 'uuid';
-import { RequestWithCustomProperties } from './models/request'
-import * as auth from './utils/authentication'
-
-export const checkIfUsefIsAlreadyAuthenticated = async (req: RequestWithCustomProperties, res: Response, next: NextFunction) => {
-    if (req.session?.userId) {
-        //no need for authed user to be here at all
-        res.status(403).redirect(`${process.env.URL}/`)
-    } 
-    else if (req.session?.verificationToken) {
-        try {
-            //error will be thrown if token is expired
-            auth.verifyAndDecodeGoogleAuthVerificationToken(req.session?.verificationToken)
-
-            //if valid, then no need to authenticate with google again
-            res.redirect('/user/login/google/callback')// - not completely sure why this works if we redirect to callback like that
-        } catch (err){
-            //if expirred, then continue with google authentication
-            next()
-        }
-    } 
-    else {
-        next()
-    }
-}
+import {checkIfGoogleOuthIsNeeded} from './middleware/authentication'
 
 const passportSetup = (app:Express) => {
     const strategyOptions = {
@@ -81,7 +58,7 @@ const passportSetup = (app:Express) => {
     app.use(passport.session());
 
     app.get('/user/login/google', 
-        checkIfUsefIsAlreadyAuthenticated,
+    checkIfGoogleOuthIsNeeded,
         passport.authenticate('google', { scope: [
             'openid',
             'email',
