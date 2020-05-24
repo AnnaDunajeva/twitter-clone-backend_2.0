@@ -1,0 +1,22 @@
+steps:
+- id: install-for-test
+  name: node
+  entrypoint: npm
+  args: ['install']
+- id: test  
+  name: node
+  entrypoint: npm
+  args: ['test']
+- id: build
+  name: 'gcr.io/cloud-builders/docker'
+  args:
+  - build
+  - '-t'
+  - 'gcr.io/augmented-world-276110/twitter-clone-backend'
+  - .
+- id: push
+  name: 'gcr.io/cloud-builders/docker'
+  args:
+  - push
+  - 'gcr.io/augmented-world-276110/twitter-clone-backend'
+timeout: 1200s

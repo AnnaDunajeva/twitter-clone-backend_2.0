@@ -4,9 +4,12 @@ build/
 tmp/
 temp/
 dist/
-env/
 ormconfig.json
 assets/insertBackgroundToDb.js
-assets/insertBackgroundToDb.ts/.blackbox/pubring.gpg~
+assets/insertBackgroundToDb.ts
+/.blackbox/pubring.gpg~
 /.blackbox/pubring.kbx~
 /.blackbox/secring.gpg
+/env/dev.env
+/env/test.env
+/env/prod.env
