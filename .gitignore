@@ -7,4 +7,6 @@ dist/
 env/
 ormconfig.json
 assets/insertBackgroundToDb.js
-assets/insertBackgroundToDb.ts
+assets/insertBackgroundToDb.ts/.blackbox/pubring.gpg~
+/.blackbox/pubring.kbx~
+/.blackbox/secring.gpg
