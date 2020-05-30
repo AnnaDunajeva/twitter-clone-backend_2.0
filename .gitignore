@@ -10,3 +10,6 @@ assets/insertBackgroundToDb.ts
 /env/dev.env
 /env/test.env
 /env/prod.env
+/keyrings/live/pubring.gpg~
+/keyrings/live/pubring.kbx~
+/keyrings/live/secring.gpg
