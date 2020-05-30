@@ -1,4 +1,4 @@
-# Awesome Project Build with TypeORM
+# Twitter-clone Backend
 
 Steps to run this project:
 
@@ -18,7 +18,21 @@ Alternatively create test database on your machine and rename DB_HOST in env/env
 
 ## Blackbox
 
-To make sure we don't run into version issues we are using a fixed gnupg and blackbox versions, found in dylanmei/blackbox docker image.
+To make sure we don't run into version issues we are using a fixed gnupg and blackbox versions, found in dylanmei/blackbox docker image (https://github.com/dylanmei/docker-blackbox, https://github.com/dylanmei/docker-blackbox).
 
-`docker run --rm -t -v $YOUR_LOCAL_GNUPG_DIR:/gnupg -v $(pwd):/repo dylanmei/blackbox`
+To use it prefix all your `gpg` and `blackbox_*` operations with:
+
+```docker run --rm -t -v $YOUR_LOCAL_GNUPG_DIR:/gnupg -v $(pwd):/repo dylanmei/blackbox <your-command>```
+
+e.g.:
+
+```docker run --rm -t -v $YOUR_LOCAL_GNUPG_DIR:/gnupg -v $(pwd):/repo dylanmei/blackbox blackbox_decrypt_all_files```
+
+```docker run --rm -t -v $YOUR_LOCAL_GNUPG_DIR:/gnupg -v $(pwd):/repo dylanmei/blackbox blackbox_edit_end env/test.env```
+
+
+
+
+
+
 
