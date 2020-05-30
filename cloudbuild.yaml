@@ -1,4 +1,25 @@
 steps:
+- id: read-gpg-key-from-secrets
+  name: gcr.io/cloud-builders/gcloud
+  volumes:
+    - name: keys
+      path: /keys  
+  entrypoint: 'bash'
+  args: [ '-c', 'gcloud secrets versions access latest --secret=gpg-private-key > /keys/gpg-private.key' ]
+- id: import-gpg-key
+  name: dylanmei/blackbox
+  volumes:
+  - name: keys
+    path: /keys
+  - name: gnupg
+    path: /gnpug
+  args: [ 'gpg', '--import', '/keys/gpg-private.key' ]
+- id: decrypt-secrets
+  name: dylanmei/blackbox
+  volumes:
+  - name: gnupg
+    path: /gnpug
+  args: [ 'blackbox_decrypt_all_files' ]
 - id: install-for-test
   name: node
   entrypoint: npm
@@ -7,6 +28,10 @@ steps:
   name: node
   entrypoint: npm
   args: ['test']
+- id: prod-secrets
+  name: gcr.io/cloud-builders/gcloud
+  entrypoint: 'bash'
+  args: [ '-c', 'gcloud secrets versions access latest --secret=twitter-clone-backend-env > env/prod.env' ]
 - id: build
   name: 'gcr.io/cloud-builders/docker'
   args:

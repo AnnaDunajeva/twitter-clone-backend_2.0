@@ -72,7 +72,7 @@ afterAll(async () => {
 test('should get userOne paginated tweets', async () => {
     const response = await agent
         .get(`/users/${userOne.userId}/tweets?take=5&skip=0&getUsers=true&time=${Date.now()}`)
-        .expect(201)
+        .expect(200)
         .expect('Content-Type', /json/)
     
     csrfCookie = response.header['set-cookie'].find((cookie: string) => cookie.includes(process.env.CSRF_COOKIE_KEY!)).split('; ')[0].slice(process.env.CSRF_COOKIE_KEY!.length + 1)//+1 for '='

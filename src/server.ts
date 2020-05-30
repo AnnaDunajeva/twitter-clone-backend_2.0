@@ -3,7 +3,6 @@ import {json} from 'body-parser'
 import {createRouter} from './routes/routes'
 import setUpSocketIo from './socket'
 import routesWithoutAuth from './routes/withoutAuthRoutes'
-// import cors from 'cors'
 import * as http from 'http'
 import session from 'express-session'
 import pgSessionStore from 'connect-pg-simple'
@@ -41,10 +40,7 @@ app.disable( 'x-powered-by' ) ;
 //    next() ;
 //  } ) ;
 
-// const pgConString = process.env.ENV ==='production'
-//     ? `postgresql://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@localhost:5432/${process.env.DB_NAME}?host=${process.env.DB_HOST}`
-//     : `postgresql://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`
-// console.log(`pgConString=${pgConString}`)
+
 //export it so that i can close it in tests
 export const sessionStoreDbConnection = new (pgSessionStore(session))({
     pool : new pg.Pool(pgConfig)

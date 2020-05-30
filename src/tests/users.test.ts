@@ -197,7 +197,7 @@ test('should update testuser profile data', async () => {
                 firstName: testUser.firstName
             })
         })
-        .expect(201)
+        .expect(200)
         .expect('Content-Type', /json/)
     
     expect(response.body).toMatchObject({

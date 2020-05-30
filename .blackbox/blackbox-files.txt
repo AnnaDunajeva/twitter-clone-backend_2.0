@@ -1,3 +1,0 @@
-env/dev.env
-env/prod.env
-env/test.env
