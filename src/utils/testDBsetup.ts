@@ -44,6 +44,7 @@ export const tweetOne = {
 export const setupDB = async () => {
     try {
         console.log("connectiong to test database...")
+        console.log(`${process.env.DB_HOST},${process.env.DB_USERNAME},${process.env.DB_NAME}`)
         await createConnection({
             "type": "postgres",
             "host": process.env.DB_HOST,
