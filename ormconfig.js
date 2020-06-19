@@ -10,21 +10,21 @@ module.exports = {
     "extra": {
         "host": `${process.env.DB_HOST}`
     },
-    "synchronize": true,
+    "synchronize": false,
     "logging": false,
     "entities": [
         `${process.env.SOURCE_DIR}/entity/**/*.${process.env.SOURCE_EXT}`
     ],
-//  "migrations": [
-//     "src/migration/**/*.ts"
-//  ],
-//  "subscribers": [
-//     "src/subscriber/**/*.ts"
-//  ],
+    "migrations": [
+        "src/migration/**/*.ts"
+    ],
+    "subscribers": [
+        "src/subscriber/**/*.ts"
+    ],
     "cli": {
         "entitiesDir": `${process.env.SOURCE_DIR}/entity`,
-        //  "migrationsDir": "src/migration",
-        //  "subscribersDir": "src/subscriber"
+         "migrationsDir": "src/migration",
+         "subscribersDir": "src/subscriber"
     }
 }
 

@@ -17,11 +17,11 @@
       "@types/jsonwebtoken": "^8.3.7",
       "@types/lodash": "^4.14.149",
       "@types/multer": "^1.4.2",
-      "@types/node": "^13.7.0",
+      "@types/node": "^13.13.12",
       "@types/sharp": "^0.24.0",
       "@types/socket.io": "^2.1.4",
-      "@types/uuid": "^3.4.7",
       "@types/supertest": "^2.0.8",
+      "@types/uuid": "^3.4.7",
       "@types/validator": "^13.0.0",
       "jest": "^25.4.0",
       "mailslurp-client": "^8.7.8",
@@ -66,6 +66,7 @@
       "test": "env-cmd -f ./env/test.env jest --runInBand",
       "test:watch": "env-cmd -f ./env/test.env jest --watch --runInBand",
       "prod": "env-cmd -f ./env/prod.env node dist/index.js",
-      "build": "tsc"
+      "build": "tsc",
+      "createMigration": "env-cmd -f ./env/dev.env ts-node ./node_modules/.bin/typeorm migration:create -n migration"
    }
 }

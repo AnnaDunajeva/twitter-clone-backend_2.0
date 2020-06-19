@@ -70,7 +70,7 @@ In these files, you need to have:
     - dev.env
         ```
         ENV=development 
-        URL=http://localhost
+        URL=http://localhost # from Nginx setup, described in frontend repository
         SOURCE_DIR=src
         SOURCE_EXT=ts
         ```
@@ -84,7 +84,7 @@ In these files, you need to have:
     - test.env
         ```
         ENV=test
-        URL=http://localhost
+        URL=http://localhost # from Nginx setup, described in frontend repository
         SOURCE_DIR=src
         SOURCE_EXT=ts
         ```

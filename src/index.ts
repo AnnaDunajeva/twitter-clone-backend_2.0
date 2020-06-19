@@ -1,10 +1,12 @@
 import "reflect-metadata";
-import {createConnection} from "typeorm";
+import {createConnection, getConnection} from "typeorm";
 import server from './server'
 
 createConnection().then(async () => {
 
-   console.log("connecting to database...");
+   console.log("connected to database");
+   console.log("checking to running migrations...");
+   await getConnection().runMigrations()
 
    const port = process.env.PORT
    server.listen(port)

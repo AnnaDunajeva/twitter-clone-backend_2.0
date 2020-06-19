@@ -37,26 +37,17 @@ export const setupDB = async () => {
         // read connection options from ormconfig file 
         const connectionOptions = await getConnectionOptions()
 
-    // create a connection using modified connection options
+        // create a connection using modified connection options
         await createConnection({
             ...connectionOptions,
             dropSchema: process.env.ENV === 'test' ? true : false //just extra check so we dont delete db we dont want to
         })
-        console.log('setting up test db...')
-    
-        getConnection().query(`
-        CREATE TABLE "session" (
-            "sid" varchar NOT NULL COLLATE "default",
-             "sess" json NOT NULL,
-             "expire" timestamp(6) NOT NULL
-         )
-         WITH (OIDS=FALSE);
-         
-         ALTER TABLE "session" ADD CONSTRAINT "session_pkey" PRIMARY KEY ("sid") NOT DEFERRABLE INITIALLY IMMEDIATE;
-         
-         CREATE INDEX "IDX_session_expire" ON "session" ("expire");`)
 
-        //download to DB default profile image
+        console.log('setting up test db...')
+        const connection = await getConnection();
+        console.log(await connection.query(`SELECT c.relname FROM pg_class c WHERE c.relkind = 'S'`));
+
+        await getConnection().runMigrations()
 
         await getRepository(Users)
             .insert([{
