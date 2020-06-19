@@ -19,6 +19,7 @@ const pgConfig: any = {
   host: process.env.DB_HOST
 };
 
+//in production we use unix socket
 if (process.env.ENV !== 'production') {
   pgConfig.port = process.env.DB_PORT;
 }

@@ -1,19 +1,8 @@
-import {createConnection, getConnection, getRepository} from "typeorm";
+import {createConnection, getConnection, getRepository, getConnectionOptions} from "typeorm";
 import {Users} from "../entity/Users"
 import bcrypt from 'bcrypt'
 import {Tweets} from "../entity/Tweets"
-//============
-// CREATE TABLE "session" (
-//    "sid" varchar NOT NULL COLLATE "default",
-// 	"sess" json NOT NULL,
-// 	"expire" timestamp(6) NOT NULL
-// )
-// WITH (OIDS=FALSE);
 
-// ALTER TABLE "session" ADD CONSTRAINT "session_pkey" PRIMARY KEY ("sid") NOT DEFERRABLE INITIALLY IMMEDIATE;
-
-// CREATE INDEX "IDX_session_expire" ON "session" ("expire");
-//===============
 export const userOne = { 
     userId: 'userone',
     firstName: 'userone', 
@@ -43,24 +32,15 @@ export const tweetOne = {
 
 export const setupDB = async () => {
     try {
-        console.log("connectiong to test database...")
-        console.log(`${process.env.DB_HOST},${process.env.DB_USERNAME},${process.env.DB_NAME}`)
+        console.log('some envs: ', process.env.DB_HOST, process.env.DB_USERNAME, process.env.DB_NAME)
+        console.log("connecting to test database...")
+        // read connection options from ormconfig file 
+        const connectionOptions = await getConnectionOptions()
+
+    // create a connection using modified connection options
         await createConnection({
-            "type": "postgres",
-            "host": process.env.DB_HOST,
-            "port": parseInt(process.env.DB_PORT as string),
-            "username": process.env.DB_USERNAME,
-            "password": process.env.DB_PASSWORD,
-            "database": process.env.DB_NAME,
-            "dropSchema": true,
-            "synchronize": true,
-            "logging": false,
-            "entities": [
-            "src/entity/**/*.ts"
-            ],
-            "cli": {
-            "entitiesDir": "src/entity"
-            }
+            ...connectionOptions,
+            dropSchema: process.env.ENV === 'test' ? true : false //just extra check so we dont delete db we dont want to
         })
         console.log('setting up test db...')
     

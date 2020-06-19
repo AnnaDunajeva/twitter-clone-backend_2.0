@@ -64,7 +64,7 @@
       "start": "env-cmd -f ./env/dev.env ts-node src/index.ts",
       "start:nodemon": "env-cmd -f ./env/dev.env nodemon --exec 'ts-node' src/index.ts",
       "test": "env-cmd -f ./env/test.env jest --runInBand",
-      "test:watch": "env-cmd -f ./env/test.env jest --watch",
+      "test:watch": "env-cmd -f ./env/test.env jest --watch --runInBand",
       "prod": "env-cmd -f ./env/prod.env node dist/index.js",
       "build": "tsc"
    }
