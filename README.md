@@ -20,7 +20,7 @@ This repository contains backend source code.
 
 4. Run `npm start` command or for hot reloading `npm run start:nodemon`
 
-## Testing <a name='testing></a>
+## Testing <a name='testing'></a>
 
 [Setup environmental variables](#environmental-variables).
 
@@ -49,7 +49,7 @@ In project root directory:
     - To run tests before building a container, follow the instructions provided in [Local testing](#testing) section
     - `docker build . -t [YOUR CONTAINER NAME]`
 
-## Setting up environmental variables <a name='environmental-variables'0></a>
+## Setting up environmental variables <a name='environmental-variables'></a>
 You would need to setup environmental variables for development, testing and production. This project assumes you have `env` folder, which contains following files:
 - `dev.env`
 - `prod.env`
