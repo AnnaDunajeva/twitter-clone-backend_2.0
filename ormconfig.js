@@ -23,8 +23,8 @@ module.exports = {
     ],
     "cli": {
         "entitiesDir": `${process.env.SOURCE_DIR}/entity`,
-         "migrationsDir": "src/migration",
-         "subscribersDir": "src/subscriber"
+         "migrationsDir": `${process.env.SOURCE_DIR}/migration`,
+         "subscribersDir": `${process.env.SOURCE_DIR}/subscriber`
     }
 }
 
