@@ -16,10 +16,10 @@ module.exports = {
         `${process.env.SOURCE_DIR}/entity/**/*.${process.env.SOURCE_EXT}`
     ],
     "migrations": [
-        "src/migration/**/*.ts"
+        `${process.env.SOURCE_DIR}/migration/**/*.${process.env.SOURCE_EXT}`
     ],
     "subscribers": [
-        "src/subscriber/**/*.ts"
+        `${process.env.SOURCE_DIR}/subscriber/**/*.${process.env.SOURCE_EXT}`
     ],
     "cli": {
         "entitiesDir": `${process.env.SOURCE_DIR}/entity`,
