@@ -13,7 +13,3 @@ services:
             POSTGRES_USER: postgres
             POSTGRES_PASSWORD: 1234
 
-networks: 
-    default:
-        external: 
-            name: cloudbuild

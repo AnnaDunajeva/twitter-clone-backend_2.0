@@ -1,0 +1,20 @@
+version: '3'
+
+services: 
+    test:
+        build:
+            context: .
+            dockerfile: Dockerfile.test
+        command: ['npm', 'test']
+    db:
+        image: postgres:11
+        environment:
+            POSTGRES_DB: twitter_clone_test
+            POSTGRES_USER: postgres
+            POSTGRES_PASSWORD: 1234
+# connect containers in existing cloudbuild network. Trying to run them in the default network
+# or creating a new network resulted in failure probably due to cloudbuild peculiarities
+networks: 
+    default:
+        external: 
+            name: cloudbuild

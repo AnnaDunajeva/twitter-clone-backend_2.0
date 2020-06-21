@@ -27,15 +27,16 @@ This repository contains backend source code.
 ### with docker-compose
 In project root directory:
     ```
-    docker network -d bridge cloudbuild     # once
-    docker-compose -f docker-compose.test.yaml up --build --exit-code-from test
+    docker-compose -f docker-compose.local-test.yaml up --build --exit-code-from test
     ```
+- This will setup a container with test database and a container to run tests in (as described in `Dockerfile.test`). It runs tests once and exits if tests pass, or waits for command if tests fail.
+- If you use for testing [docker-compose](#testing), set `DB_HOST` to `db`, otherwise your host.
 ### Directly on your machine
 1. [Setup database](#database-setup)
 
 2. run `npm test` or for interactive watch mode `npm run test:watch` 
 
-## Deploy application 
+## Production  
 
 1. Deploying on Google Cloud:
     - Replace `gcr.io/augmented-world-276110/twitter-clone-frontend` in `cloudbuild.yaml` with path to your container registry.
@@ -55,7 +56,7 @@ You would need to setup environmental variables for development, testing and pro
 - `prod.env`
 - `test.env`
 
-In these files, you need to have:
+In these files, you would need to have:
 - common property names and values:
     ```
     PORT=3001 # port on which server listens
@@ -123,16 +124,10 @@ In these files, you need to have:
 
 ## Database Setup <a name='database-setup'></a>
 
-You would need to add to development and production databases you create a table for `express-session`'s data:
-```
-CREATE TABLE "session" ("sid" varchar NOT NULL COLLATE "default", "sess" json NOT NULL, "expire" timestamp(6) NOT NULL) WITH (OIDS=FALSE);
-ALTER TABLE "session" ADD CONSTRAINT "session_pkey" PRIMARY KEY ("sid") NOT DEFERRABLE INITIALLY IMMEDIATE;
-CREATE INDEX "IDX_session_expire" ON "session" ("expire");
-```
+Database schema is set up on the initial connection via migrations (including the insertion of background image and default avatar).
 
 1. Development
-    - Crete postgres database
-    - Add table for `express-sessions`'s data as described above
+    - Crete a postgres database
     - Setup the following environmental variables in `dev.env` to connect to your database:
         ```
         DB_HOST
@@ -143,9 +138,8 @@ CREATE INDEX "IDX_session_expire" ON "session" ("expire");
         ```
 2. Production
     This project uses CloudSQL to host postgres production database and connects to it from containers that are hosted on Cloud Run.
-    - (Create Cloud SQL instance)[https://cloud.google.com/sql/docs/postgres/quickstart-connect-run]
+    - (Create a Cloud SQL instance)[https://cloud.google.com/sql/docs/postgres/quickstart-connect-run]
     - Create a SQL database on your Cloud SQL instance
-    - Add table for `express-sessions`'s data as described above
     - setup environmental variables in `prod.env` file
         ```
         DB_HOST=/cloudsql/PROJECT-ID:REGION:INSTANCE-ID 
@@ -157,16 +151,17 @@ CREATE INDEX "IDX_session_expire" ON "session" ("expire");
         - (more on how to connect to Cloud SQL from Cloud Run) [https://cloud.google.com/sql/docs/postgres/connect-run]
 
 3. Testing
-    - Crete a postgres database
-    - Setup environmental variables in `test.env` for TypeOrm to connect to your database:
-        ```
-        DB_HOST=db   
-        DB_PORT
-        DB_USERNAME
-        DB_PASSWORD
-        DB_NAME
-        ```
-    - if you use for testing [docker-compose](#testing), set `DB_HOST` to `db`, otherwise your host
+If you use docker-compose for testing, you dont need to setup a database. For testing directly on your machine, you need to create a test database.
+
+Setup environmental variables in `test.env` for TypeOrm to connect to your database:
+    ```
+    DB_HOST=db   
+    DB_PORT
+    DB_USERNAME
+    DB_PASSWORD
+    DB_NAME
+    ```
+- if you use for testing [docker-compose](#testing), set `DB_HOST` to `db`, otherwise your host.
 
 ## Blackbox
 `.env` files are encrypted with [blackbox](https://github.com/StackExchange/blackbox). Gnupg key is stored on Google cloud secrets and is retrived from Google cloud during container building (refer to `cloudbuild.yaml`) to decrypt `.env` files.
@@ -191,3 +186,4 @@ docker run --rm -t -v $YOUR_LOCAL_GNUPG_DIR:/gnupg -v $(pwd):/repo dylanmei/blac
 - Remove non-cloud deployment description: it is literally just docker building instruction
 - Add background images to repo and to db (easy using migrations)
 - Sessions should be moved to migrations as well.
+- test.env db variables need to be for docker compose exatly as they are in my files

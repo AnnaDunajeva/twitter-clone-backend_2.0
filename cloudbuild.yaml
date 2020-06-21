@@ -25,7 +25,7 @@ steps:
   name: 'docker/compose:1.17.1'
   args:
     - '-f'
-    - 'docker-compose.test.yaml'
+    - 'docker-compose.cloud-test.yaml'
     - 'up'
     - '--build'
     - '--exit-code-from'
