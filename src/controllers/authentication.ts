@@ -110,7 +110,7 @@ export const login: RequestHandler = async (req, res) => {
         const userProfile = await users.getUserProfile(userId)
 
         res.status(200).json({user: userProfile, status: "ok"})
-        console.log(`LOGGED_IN: ${userProfile}`)
+        console.log('LOGGED_IN: ', JSON.stringify(userProfile))
     }
     catch (err) {
         console.log(err)
