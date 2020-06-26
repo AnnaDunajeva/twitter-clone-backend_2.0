@@ -172,7 +172,8 @@ export const resetPassword = async (req: RequestWithCustomProperties, res: Respo
         const resetPasswordToken = req.body.token
         const password = req.body.password
 
-        if(password.length > 50) throw new Error('Input too long.')
+        if (password.length > 50) throw new Error('Input too long.')
+        if (password.length < 6) throw new Error('Password should be at least 6 characters long.')
 
         const ResetPasswordTokensRepo = getRepository(ResetPasswordTokens)
         

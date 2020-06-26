@@ -143,6 +143,7 @@ export const addUser: RequestHandler = async (req, res) => {
         }
         
         //TODO: check if password is strong enough
+        if (password.length < 6) throw new Error('Password should be at least 6 characters long.')
         if (userId.length > 20 || firstName.length > 100 || lastName.length > 100 || email.length > 300 || password.length > 50) {
             throw new Error('Input too long.')
         }

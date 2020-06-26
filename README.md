@@ -6,6 +6,9 @@ Allows users to create account or login with Google credentials. Users can make 
 This repository contains backend source code.
 - [Link to frontend](https://github.com/AnnaDunajeva/twitter-clone_2.0)
 - [Link to live demo](https://twitter-frontend-4zauvs5bna-uc.a.run.app/login)
+    - if you do not wish to sign up, you can use the following credentials: 
+        - username: `user`
+        - password: `12345`
 
 ## Setup for development
 1. Run the initial setup
@@ -24,7 +27,7 @@ This repository contains backend source code.
 
 [Setup environmental variables](#environmental-variables).
 
-### with docker-compose
+### With docker-compose
 In project root directory:
     ```
     docker-compose -f docker-compose.local-test.yaml up --build --exit-code-from test
@@ -112,7 +115,7 @@ In these files, you would need to have:
         GOOGLE_CLIENT_ID
         GOOGLE_CLIENT_SECRET
         ```
-- Other secrets:
+- other secrets:
     - This app uses `express-session` package, which requires secret to sign the session ID cookie:
         ```
         SESSION_SECRET
@@ -155,13 +158,20 @@ If you use docker-compose for testing, you dont need to setup a database. For te
 
 Setup environmental variables in `test.env` for TypeOrm to connect to your database:
     ```
-    DB_HOST=db   
+    DB_HOST
     DB_PORT
     DB_USERNAME
     DB_PASSWORD
     DB_NAME
     ```
-- if you use for testing [docker-compose](#testing), set `DB_HOST` to `db`, otherwise your host.
+- If you use for testing [docker-compose](#testing):
+    ```
+    DB_HOST=db
+    DB_PORT=5432
+    DB_USERNAME=postgres
+    DB_PASSWORD=1234
+    DB_NAME=twitter_clone_test
+    ```
 
 ## Blackbox
 `.env` files are encrypted with [blackbox](https://github.com/StackExchange/blackbox). Gnupg key is stored on Google cloud secrets and is retrived from Google cloud during container building (refer to `cloudbuild.yaml`) to decrypt `.env` files.
@@ -182,8 +192,5 @@ docker run --rm -t -v $YOUR_LOCAL_GNUPG_DIR:/gnupg -v $(pwd):/repo dylanmei/blac
 
 
 
-# Comments
+# Todos
 - Remove non-cloud deployment description: it is literally just docker building instruction
-- Add background images to repo and to db (easy using migrations)
-- Sessions should be moved to migrations as well.
-- test.env db variables need to be for docker compose exatly as they are in my files
