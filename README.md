@@ -7,7 +7,7 @@ This repository contains backend source code.
 - [Link to frontend](https://github.com/AnnaDunajeva/twitter-clone_2.0)
 - [Link to live demo](https://twitter-frontend-4zauvs5bna-uc.a.run.app/login)
     - if you do not wish to sign up, you can use the following credentials: 
-        - username: `user`
+        - username: `user1`
         - password: `12345`
 
 ## Setup for development

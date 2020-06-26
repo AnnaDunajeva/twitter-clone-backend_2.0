@@ -110,6 +110,7 @@ export const login: RequestHandler = async (req, res) => {
         const userProfile = await users.getUserProfile(userId)
 
         res.status(200).json({user: userProfile, status: "ok"})
+        console.log(`LOGGED_IN: ${userProfile}`)
     }
     catch (err) {
         console.log(err)
@@ -119,6 +120,7 @@ export const login: RequestHandler = async (req, res) => {
 
 export const logout = async (req: RequestWithCustomProperties, res: Response) => {
     try {
+        console.log(`LOGGED_OUT: ${req.session?.userId}`)
         req.session!.destroy(err => {
             if (err) {
                 throw new Error('Oop, something went wrong. Please try again.')
