@@ -147,14 +147,14 @@ export const sanitazeUsername = (input: string) => {
 export const sanitazeFirstOrLastname = (input: string) => {
     return input
     .trim()
-    .replace(/[^a-zA-Z- ]/g, "")
+    .replace(/[^a-zA-Z- üõöä]/g, "")
     //replace multiple spaces/whitespace with one
     .replace(/\s\s+/g, ' ');
 }
 export const sanitazeLocation = (input: string) => {
     return input
     .trim()
-    .replace(/[^a-zA-Z-, ]/g, "")
+    .replace(/[^a-zA-Z-, üõöä]/g, "")
     //replace multiple spaces/whitespace with one
     .replace(/\s\s+/g, ' ');
 }
