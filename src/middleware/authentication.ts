@@ -26,7 +26,13 @@ export const checkIfGoogleOuthIsNeeded = async (req: RequestWithCustomProperties
             await auth.verifyAndDecodeGoogleAuthVerificationToken(req.session?.verificationToken)
 
             //if valid, then no need to authenticate with google again
-            res.redirect('/user/login/google/callback')// - not completely sure why this works if we redirect to callback like that
+
+            //does not seem to work like that
+            //res.redirect(`/user/login/google/callback`) - cause has passport middleware before it
+            //I think I need a separate redirect route for authWithGoogleCallback without passport
+
+            //so just authenticate again for now
+            next()
         } catch (err){
             console.log(err)
             console.log('new google auth is needed')

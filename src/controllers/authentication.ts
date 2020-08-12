@@ -284,7 +284,7 @@ export const authWithGoogleCallback = async (req: RequestWithCustomProperties, r
             //add userId cookie
             res.cookie(process.env.USER_COOKIE_ID || 'id', user.userId, {
                 maxAge: parseInt(process.env.SESSION_LIFETIME || '3600000'),
-                sameSite: 'none',
+                sameSite: 'strict',
                 httpOnly: false, 
                 //secure: process.env.ENV === 'production' ? true : false 
             })
@@ -311,7 +311,7 @@ export const authWithGoogleCallback = async (req: RequestWithCustomProperties, r
             console.log('oauthData', oauthData)
             res.cookie(process.env.COOKIE_OAUTH_USER_DATA_NAME || 'oauth_user_data', oauthData, {
                 maxAge: parseInt(process.env.COOKIE_OAUTH_VERIFICATION_TOKEN_LIFETIME || '3600000'),
-                sameSite: 'none',
+                sameSite: 'strict',
                 httpOnly: false, 
                 encode: String,
                 //secure: process.env.ENV === 'production' ? true : false 
