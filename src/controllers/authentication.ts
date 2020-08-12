@@ -50,7 +50,7 @@ export const verifyUserEmail = async (req: RequestWithCustomProperties, res: Res
         req.session!.userId = user.userId
         res.cookie(process.env.USER_COOKIE_ID || 'id', user.userId, {
             maxAge: parseInt(process.env.SESSION_LIFETIME || '3600000'),
-            sameSite: 'none', //smasite true does not allow to acces cookie in firefox
+            sameSite: 'strict', //smasite true does not allow to acces cookie in firefox
             httpOnly: false, 
             //secure: process.env.ENV === 'production' ? true : false //should be true in production
         })
@@ -102,7 +102,7 @@ export const login: RequestHandler = async (req, res) => {
         //add userId cookie
         res.cookie(process.env.USER_COOKIE_ID || 'id', user.userId, {
             maxAge: parseInt(process.env.SESSION_LIFETIME || '3600000'),
-            sameSite: 'none',
+            sameSite: 'strict',
             httpOnly: false, 
             //secure: process.env.ENV === 'production' ? true : false //should be true in production
         })
@@ -389,7 +389,7 @@ export const completeGoogleAuthAccountCreation = async (req: RequestWithCustomPr
         req.session!.userId = userDataToUpdate.userId
         res.cookie(process.env.USER_COOKIE_ID || 'id', userDataToUpdate.userId, {
             maxAge: parseInt(process.env.SESSION_LIFETIME || '3600000'),
-            sameSite: 'none', //smasite true does not allow to acces cookie in firefox
+            sameSite: 'strict', //smasite true does not allow to acces cookie in firefox
             httpOnly: false, 
             //secure: process.env.ENV === 'production' ? true : false //should be true in production
         })
