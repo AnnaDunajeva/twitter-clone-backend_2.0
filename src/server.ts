@@ -73,7 +73,7 @@ app.use(csrfProtection)
 
 app.use(function (req, res, next) { //new token on each request BREACH attack protection
     res.cookie(process.env.CSRF_COOKIE_KEY || 'XSRF-TOKEN', req.csrfToken(), {
-      sameSite: 'strict', 
+      // sameSite: 'strict', 
       secure: process.env.ENV === 'production' ? true : false
     })
     next()
