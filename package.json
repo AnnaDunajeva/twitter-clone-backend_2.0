@@ -36,7 +36,7 @@
       "@types/cookie-parser": "^1.4.2",
       "@types/passport": "^1.0.3",
       "@types/passport-google-oauth20": "^2.0.3",
-      "bcrypt": "^3.0.8",
+      "bcrypt": "^5.0.0",
       "body-parser": "^1.19.0",
       "connect-pg-simple": "^6.1.0",
       "cookie-parser": "^1.4.5",
