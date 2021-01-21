@@ -55,7 +55,7 @@
       "query-string": "^6.10.1",
       "reflect-metadata": "^0.1.13",
       "sharp": "^0.25.1",
-      "socket.io": "^2.3.0",
+      "socket.io": "^2.4.0",
       "typeorm": "0.2.22",
       "uuid": "^3.4.0",
       "validator": "^13.0.0"
