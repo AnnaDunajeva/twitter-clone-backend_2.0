@@ -54,7 +54,7 @@
       "pg": "^7.18.1",
       "query-string": "^6.10.1",
       "reflect-metadata": "^0.1.13",
-      "sharp": "^0.25.1",
+      "sharp": "^0.30.5",
       "socket.io": "^2.3.0",
       "typeorm": "0.2.22",
       "uuid": "^3.4.0",
